@@ -103,7 +103,7 @@
         </div>
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         <div id="instructions">
-            Arrow Keys or WASD to move | SPACE to jump | Collect all grapes to advance!
+            Arrow Keys / WASD to move | SPACE to jump | Mobile: Tap left/right to move, tap to jump, shake to jump!
         </div>
 
         <div id="startScreen">
@@ -137,6 +137,7 @@
 
         // Game state
         let gameRunning = false;
+        let demoMode = true;
         let keys = {};
         let grapes = [];
         let platforms = [];
@@ -147,6 +148,10 @@
         let gameMessage = '';
         let messageTimer = 0;
         let musicPlaying = false;
+
+        // Demo AI state
+        let targetGrape = null;
+        let demoJumpCooldown = 0;
 
         const MAX_LEVEL = 5;
 
@@ -620,23 +625,89 @@
             messageTimer = 90;
         }
 
-        function update() {
-            if (!gameRunning) return;
+        // Demo AI - finds nearest uncollected grape and moves toward it
+        function updateDemoAI() {
+            if (!demoMode) return;
 
-            // Input
-            if (keys['ArrowLeft'] || keys['KeyA']) {
-                duck.vx = -duck.speed;
-                duck.facing = -1;
-            } else if (keys['ArrowRight'] || keys['KeyD']) {
-                duck.vx = duck.speed;
+            // Find nearest uncollected grape
+            let nearestDist = Infinity;
+            targetGrape = null;
+            for (const grape of grapes) {
+                if (!grape.collected) {
+                    const dx = grape.x - (duck.x + duck.width/2);
+                    const dy = grape.y - (duck.y + duck.height/2);
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        targetGrape = grape;
+                    }
+                }
+            }
+
+            if (!targetGrape) {
+                // All grapes collected, reset level for demo
+                generateLevel(level);
+                return;
+            }
+
+            // Move toward target grape
+            const dx = targetGrape.x - (duck.x + duck.width/2);
+
+            if (dx > 20) {
+                duck.vx = duck.speed * 0.8;
                 duck.facing = 1;
+            } else if (dx < -20) {
+                duck.vx = -duck.speed * 0.8;
+                duck.facing = -1;
             } else {
                 duck.vx *= friction;
             }
 
-            if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && duck.onGround) {
+            // Jump logic
+            demoJumpCooldown--;
+            const needsToJumpUp = targetGrape.y < duck.y - 30;
+            const nearPlatformEdge = duck.x < 50 || duck.x > canvas.width - 100;
+
+            // Check if there's a platform above we need to reach
+            let platformAbove = false;
+            for (const p of platforms) {
+                if (p.y < duck.y && p.y > duck.y - 150 &&
+                    duck.x + duck.width > p.x - 50 && duck.x < p.x + p.width + 50) {
+                    platformAbove = true;
+                    break;
+                }
+            }
+
+            if (duck.onGround && demoJumpCooldown <= 0 && (needsToJumpUp || platformAbove)) {
                 duck.vy = duck.jumpForce;
                 duck.onGround = false;
+                demoJumpCooldown = 30;
+            }
+        }
+
+        function update() {
+            // Run demo mode even when game not started
+            if (demoMode && !gameRunning) {
+                updateDemoAI();
+            }
+
+            // Player input only when game is running (not demo)
+            if (gameRunning && !demoMode) {
+                if (keys['ArrowLeft'] || keys['KeyA'] || keys['touchLeft']) {
+                    duck.vx = -duck.speed;
+                    duck.facing = -1;
+                } else if (keys['ArrowRight'] || keys['KeyD'] || keys['touchRight']) {
+                    duck.vx = duck.speed;
+                    duck.facing = 1;
+                } else {
+                    duck.vx *= friction;
+                }
+
+                if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['touchJump']) && duck.onGround) {
+                    duck.vy = duck.jumpForce;
+                    duck.onGround = false;
+                    keys['touchJump'] = false; // Reset tap jump
+                }
             }
 
             duck.vy += gravity;
@@ -652,7 +723,7 @@
                 duck.x = 50;
                 duck.y = 350;
                 duck.vy = 0;
-                showMessage("Whoops! Try again!");
+                if (gameRunning) showMessage("Whoops! Try again!");
             }
 
             // Walk animation
@@ -667,11 +738,25 @@
             }
 
             checkPlatformCollision();
-            checkGrapeCollection();
 
-            // Update UI
-            grapeCountEl.textContent = grapesCollected + '/' + totalGrapes;
-            levelNumEl.textContent = level;
+            // Only collect grapes and update UI when game is running
+            if (gameRunning) {
+                checkGrapeCollection();
+                grapeCountEl.textContent = grapesCollected + '/' + totalGrapes;
+                levelNumEl.textContent = level;
+            } else if (demoMode) {
+                // Demo mode grape collection (just for show, resets)
+                for (const grape of grapes) {
+                    if (!grape.collected) {
+                        const dx = (duck.x + duck.width/2) - grape.x;
+                        const dy = (duck.y + duck.height/2) - grape.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < 40) {
+                            grape.collected = true;
+                        }
+                    }
+                }
+            }
 
             if (messageTimer > 0) messageTimer--;
         }
@@ -745,6 +830,7 @@
 
             level = 1;
             totalGrapesCollected = 0;
+            demoMode = false;
             generateLevel(1);
             gameRunning = true;
 
@@ -767,6 +853,78 @@
         document.addEventListener('keyup', (e) => {
             keys[e.code] = false;
         });
+
+        // Mobile touch controls
+        let touchStartX = 0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            touchStartX = x;
+
+            // Tap anywhere to jump
+            keys['touchJump'] = true;
+
+            // Left third = move left, right third = move right
+            if (x < canvas.width / 3) {
+                keys['touchLeft'] = true;
+                keys['touchRight'] = false;
+            } else if (x > canvas.width * 2 / 3) {
+                keys['touchRight'] = true;
+                keys['touchLeft'] = false;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+
+            if (x < canvas.width / 3) {
+                keys['touchLeft'] = true;
+                keys['touchRight'] = false;
+            } else if (x > canvas.width * 2 / 3) {
+                keys['touchRight'] = true;
+                keys['touchLeft'] = false;
+            } else {
+                keys['touchLeft'] = false;
+                keys['touchRight'] = false;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            keys['touchLeft'] = false;
+            keys['touchRight'] = false;
+        });
+
+        // Shake to jump (mobile)
+        let lastShakeTime = 0;
+        let lastAccel = { x: 0, y: 0, z: 0 };
+
+        if (window.DeviceMotionEvent) {
+            window.addEventListener('devicemotion', (e) => {
+                const accel = e.accelerationIncludingGravity;
+                if (!accel) return;
+
+                const deltaX = Math.abs(accel.x - lastAccel.x);
+                const deltaY = Math.abs(accel.y - lastAccel.y);
+                const deltaZ = Math.abs(accel.z - lastAccel.z);
+
+                const shakeThreshold = 15;
+                const now = Date.now();
+
+                if ((deltaX > shakeThreshold || deltaY > shakeThreshold || deltaZ > shakeThreshold)
+                    && now - lastShakeTime > 300) {
+                    keys['touchJump'] = true;
+                    lastShakeTime = now;
+                }
+
+                lastAccel = { x: accel.x, y: accel.y, z: accel.z };
+            });
+        }
 
         // Initialize
         generateLevel(1);
