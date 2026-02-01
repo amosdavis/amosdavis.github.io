@@ -1,0 +1,23 @@
+title: Amos Davis
+description: My personal blog
+author: Amos Davis
+email: # your email (optional)
+
+# Build settings
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# Permalink style for posts
+permalink: /:year/:month/:day/:title/
+
+# Social links (optional - uncomment and fill in)
+# twitter_username: your_twitter
+# github_username: amosdavis
+
+# Exclude from processing
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
