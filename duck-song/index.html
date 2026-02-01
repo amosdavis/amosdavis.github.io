@@ -747,6 +747,13 @@
             totalGrapesCollected = 0;
             generateLevel(1);
             gameRunning = true;
+
+            // Auto-play music when game starts
+            if (!musicPlaying) {
+                bgMusic.play().catch(e => console.log('Audio play failed:', e));
+                musicBtn.textContent = 'Music: ON';
+                musicPlaying = true;
+            }
         }
 
         // Event listeners
