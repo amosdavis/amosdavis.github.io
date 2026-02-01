@@ -15,7 +15,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: #1a1a2e;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             font-family: 'Comic Sans MS', cursive, sans-serif;
         }
         #gameContainer {
@@ -26,14 +26,17 @@
         #gameCanvas {
             border: 4px solid #8B4513;
             border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
         }
         #ui {
             display: flex;
             gap: 30px;
             margin-bottom: 10px;
             color: white;
-            font-size: 20px;
+            font-size: 18px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
         }
         #instructions {
             color: #aaa;
@@ -43,10 +46,51 @@
         }
         #title {
             color: #FFD700;
-            font-size: 32px;
+            font-size: 28px;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
+        #musicBtn {
+            background: #FFD700;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: transform 0.1s;
+        }
+        #musicBtn:hover {
+            transform: scale(1.05);
+        }
+        #startScreen, #gameOverScreen, #winScreen {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        .screen-btn {
+            background: #FFD700;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 20px;
+            margin-top: 20px;
+            transition: transform 0.1s, background 0.2s;
+        }
+        .screen-btn:hover {
+            transform: scale(1.1);
+            background: #FFA500;
+        }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -55,130 +99,161 @@
         <div id="ui">
             <span>Grapes: <span id="grapeCount">0</span></span>
             <span>Level: <span id="levelNum">1</span></span>
+            <span>Lives: <span id="lives">3</span></span>
+            <button id="musicBtn" onclick="toggleMusic()">🎵 Music: OFF</button>
         </div>
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         <div id="instructions">
-            Arrow Keys or WASD to move | SPACE to jump | Collect all grapes to advance!
+            Arrow Keys or WASD to move | SPACE to jump | Avoid the angry lemonade vendors!
+        </div>
+
+        <div id="startScreen">
+            <h1 style="color: #FFD700; font-size: 36px;">🦆 The Duck Song Game 🍇</h1>
+            <p style="margin: 20px 0; font-size: 18px;">Help the duck collect grapes while avoiding<br>the angry lemonade vendors!</p>
+            <p style="color: #aaa;">Controls: Arrow Keys / WASD + Space</p>
+            <button class="screen-btn" onclick="startGame()">Start Game!</button>
+        </div>
+
+        <div id="gameOverScreen" class="hidden">
+            <h1 style="color: #FF6B6B; font-size: 36px;">Game Over! 😢</h1>
+            <p style="margin: 20px 0; font-size: 18px;">The lemonade vendors got you!</p>
+            <p>You collected <span id="finalGrapes">0</span> grapes</p>
+            <button class="screen-btn" onclick="startGame()">Try Again</button>
+        </div>
+
+        <div id="winScreen" class="hidden">
+            <h1 style="color: #FFD700; font-size: 36px;">🎉 You Win! 🎉</h1>
+            <p style="margin: 20px 0; font-size: 18px;">The duck finally got all the grapes!</p>
+            <p style="color: #8B008B;">Total grapes collected: <span id="totalGrapes">0</span></p>
+            <button class="screen-btn" onclick="startGame()">Play Again</button>
         </div>
     </div>
+
+    <audio id="bgMusic" loop>
+        <source src="duck_song.mp3" type="audio/mpeg">
+    </audio>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const grapeCountEl = document.getElementById('grapeCount');
         const levelNumEl = document.getElementById('levelNum');
+        const livesEl = document.getElementById('lives');
+        const musicBtn = document.getElementById('musicBtn');
+        const bgMusic = document.getElementById('bgMusic');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const winScreen = document.getElementById('winScreen');
+
+        // Load sprites
+        const duckImg = new Image();
+        duckImg.src = 'duck_full.png';
+
+        const enemyImg = new Image();
+        enemyImg.src = 'lemonade_man.png';
 
         // Game state
+        let gameRunning = false;
         let keys = {};
         let grapes = [];
         let platforms = [];
+        let enemies = [];
         let level = 1;
+        let lives = 3;
         let grapesCollected = 0;
+        let totalGrapesCollected = 0;
         let totalGrapes = 0;
         let gameMessage = '';
         let messageTimer = 0;
+        let musicPlaying = false;
+        let invincibleTimer = 0;
+
+        const MAX_LEVEL = 5;
 
         // Duck player
         const duck = {
             x: 100,
             y: 300,
-            width: 50,
-            height: 60,
+            width: 60,
+            height: 70,
             vx: 0,
             vy: 0,
             speed: 5,
-            jumpForce: -14,
+            jumpForce: -15,
             onGround: false,
-            facing: 1, // 1 = right, -1 = left
-            walkFrame: 0,
-            walkTimer: 0
-        };
-
-        // Lemonade stand
-        const lemonadeStand = {
-            x: 600,
-            y: 280,
-            width: 120,
-            height: 150
+            facing: 1
         };
 
         // Physics
-        const gravity = 0.6;
+        const gravity = 0.7;
         const friction = 0.85;
 
-        // Draw the duck (based on the cartoon style)
-        function drawDuck(x, y, facing, walkFrame) {
+        function toggleMusic() {
+            if (musicPlaying) {
+                bgMusic.pause();
+                musicBtn.textContent = '🎵 Music: OFF';
+                musicPlaying = false;
+            } else {
+                bgMusic.play().catch(e => console.log('Audio play failed:', e));
+                musicBtn.textContent = '🎵 Music: ON';
+                musicPlaying = true;
+            }
+        }
+
+        // Draw the duck using the sprite
+        function drawDuck(x, y, facing) {
             ctx.save();
+            if (invincibleTimer > 0 && Math.floor(invincibleTimer / 5) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
             ctx.translate(x + duck.width/2, y + duck.height/2);
             ctx.scale(facing, 1);
             ctx.translate(-duck.width/2, -duck.height/2);
 
-            // Body (yellow oval)
-            ctx.fillStyle = '#FFB830';
-            ctx.beginPath();
-            ctx.ellipse(25, 35, 22, 28, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Head
-            ctx.fillStyle = '#FFB830';
-            ctx.beginPath();
-            ctx.arc(30, 12, 16, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Beak (orange)
-            ctx.fillStyle = '#FF6B35';
-            ctx.beginPath();
-            ctx.moveTo(44, 10);
-            ctx.lineTo(60, 14);
-            ctx.lineTo(44, 18);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // Eye (white with black pupil)
-            ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.ellipse(36, 8, 6, 7, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Pupil
-            ctx.fillStyle = 'black';
-            ctx.beginPath();
-            ctx.arc(38, 8, 3, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Legs
-            ctx.strokeStyle = '#FF6B35';
-            ctx.lineWidth = 3;
-            const legOffset = Math.sin(walkFrame * 0.3) * 5;
-
-            // Left leg
-            ctx.beginPath();
-            ctx.moveTo(18, 58);
-            ctx.lineTo(15 - legOffset, 70);
-            ctx.stroke();
-
-            // Right leg
-            ctx.beginPath();
-            ctx.moveTo(32, 58);
-            ctx.lineTo(35 + legOffset, 70);
-            ctx.stroke();
-
-            // Feet
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(10 - legOffset, 70);
-            ctx.lineTo(20 - legOffset, 70);
-            ctx.moveTo(30 + legOffset, 70);
-            ctx.lineTo(40 + legOffset, 70);
-            ctx.stroke();
-
+            if (duckImg.complete) {
+                ctx.drawImage(duckImg, 0, 0, duck.width, duck.height);
+            } else {
+                // Fallback drawn duck
+                ctx.fillStyle = '#FFB830';
+                ctx.beginPath();
+                ctx.ellipse(30, 40, 25, 30, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FF6B35';
+                ctx.beginPath();
+                ctx.moveTo(50, 25);
+                ctx.lineTo(70, 30);
+                ctx.lineTo(50, 35);
+                ctx.closePath();
+                ctx.fill();
+            }
             ctx.restore();
+        }
+
+        // Draw enemy (lemonade vendor)
+        function drawEnemy(e) {
+            ctx.save();
+            ctx.translate(e.x + e.width/2, e.y + e.height/2);
+            ctx.scale(e.facing, 1);
+            ctx.translate(-e.width/2, -e.height/2);
+
+            if (enemyImg.complete) {
+                ctx.drawImage(enemyImg, 0, 0, e.width, e.height);
+            } else {
+                // Fallback drawn enemy
+                ctx.fillStyle = '#FDBF6F';
+                ctx.beginPath();
+                ctx.arc(e.width/2, 15, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#4169E1';
+                ctx.fillRect(e.width/2 - 15, 30, 30, 40);
+            }
+            ctx.restore();
+
+            // Angry indicator
+            ctx.fillStyle = '#FF0000';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('😠', e.x + e.width/2, e.y - 10);
         }
 
         // Draw a grape bunch
@@ -200,7 +275,7 @@
             ctx.ellipse(x + 5, y - size - 8, 8, 4, 0.3, 0, Math.PI * 2);
             ctx.fill();
 
-            // Grapes in a bunch pattern
+            // Grapes
             const positions = [
                 {dx: 0, dy: 0},
                 {dx: -size*0.7, dy: -size*0.4},
@@ -218,104 +293,11 @@
                 ctx.strokeStyle = '#4B0082';
                 ctx.lineWidth = 1;
                 ctx.stroke();
-
-                // Highlight
                 ctx.fillStyle = highlight;
                 ctx.beginPath();
                 ctx.arc(x + pos.dx - 2, y + pos.dy - 2, size * 0.15, 0, Math.PI * 2);
                 ctx.fill();
             });
-        }
-
-        // Draw lemonade stand
-        function drawLemonadeStand(x, y) {
-            // Stand base (brown)
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(x, y + 70, 120, 80);
-            ctx.strokeStyle = '#5D2E0C';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(x, y + 70, 120, 80);
-
-            // Counter top
-            ctx.fillStyle = '#A0522D';
-            ctx.fillRect(x - 5, y + 65, 130, 10);
-
-            // Sign board
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(x + 10, y - 30, 100, 40);
-            ctx.strokeRect(x + 10, y - 30, 100, 40);
-
-            // Sign text - "ICE FRESH"
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 12px Comic Sans MS';
-            ctx.textAlign = 'center';
-            ctx.fillText('ICE FRESH', x + 60, y - 12);
-
-            // Sign text - "Lemonade"
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 14px Comic Sans MS';
-            ctx.fillText('Lemonade', x + 60, y + 90);
-
-            // Roof poles
-            ctx.strokeStyle = '#8B4513';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(x + 20, y - 30);
-            ctx.lineTo(x + 20, y + 70);
-            ctx.moveTo(x + 100, y - 30);
-            ctx.lineTo(x + 100, y + 70);
-            ctx.stroke();
-
-            // Lemonade pitcher
-            ctx.fillStyle = '#FFFF99';
-            ctx.beginPath();
-            ctx.ellipse(x + 45, y + 55, 12, 15, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Pitcher handle
-            ctx.beginPath();
-            ctx.arc(x + 58, y + 55, 8, -Math.PI/2, Math.PI/2);
-            ctx.stroke();
-
-            // Lemonade man (simple)
-            // Head
-            ctx.fillStyle = '#FDBF6F';
-            ctx.beginPath();
-            ctx.arc(x + 75, y + 30, 15, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Hair
-            ctx.fillStyle = '#8B4513';
-            ctx.beginPath();
-            ctx.arc(x + 75, y + 22, 14, Math.PI, 2 * Math.PI);
-            ctx.fill();
-
-            // Eyes
-            ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(x + 70, y + 28, 4, 0, Math.PI * 2);
-            ctx.arc(x + 80, y + 28, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'black';
-            ctx.beginPath();
-            ctx.arc(x + 70, y + 28, 2, 0, Math.PI * 2);
-            ctx.arc(x + 80, y + 28, 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Frown
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(x + 75, y + 40, 5, 0.2 * Math.PI, 0.8 * Math.PI);
-            ctx.stroke();
-
-            // Body (blue shirt)
-            ctx.fillStyle = '#4169E1';
-            ctx.fillRect(x + 60, y + 45, 30, 25);
         }
 
         // Draw background
@@ -332,19 +314,17 @@
             ctx.beginPath();
             ctx.arc(720, 60, 35, 0, Math.PI * 2);
             ctx.fill();
-
-            // Sun rays
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 3;
             for (let i = 0; i < 8; i++) {
                 const angle = (i / 8) * Math.PI * 2;
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.moveTo(720 + Math.cos(angle) * 40, 60 + Math.sin(angle) * 40);
                 ctx.lineTo(720 + Math.cos(angle) * 55, 60 + Math.sin(angle) * 55);
                 ctx.stroke();
             }
 
-            // Hills in background
+            // Hills
             ctx.fillStyle = '#3CB371';
             ctx.beginPath();
             ctx.moveTo(0, 250);
@@ -360,7 +340,6 @@
             ctx.fillRect(50, 180, 30, 70);
             ctx.fillRect(85, 200, 25, 50);
             ctx.fillRect(115, 170, 35, 80);
-            ctx.fillRect(155, 190, 20, 60);
 
             // Tree
             ctx.fillStyle = '#8B4513';
@@ -369,51 +348,24 @@
             ctx.beginPath();
             ctx.arc(187, 180, 40, 0, Math.PI * 2);
             ctx.fill();
-            ctx.beginPath();
-            ctx.arc(170, 200, 30, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(205, 195, 32, 0, Math.PI * 2);
-            ctx.fill();
 
             // Ground
             ctx.fillStyle = '#32CD32';
             ctx.fillRect(0, 300, canvas.width, 200);
 
-            // Grass texture
-            ctx.strokeStyle = '#228B22';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += 15) {
-                ctx.beginPath();
-                ctx.moveTo(i, 300);
-                ctx.lineTo(i + 3, 295);
-                ctx.moveTo(i + 7, 300);
-                ctx.lineTo(i + 10, 293);
-                ctx.stroke();
-            }
+            // Level indicator
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.font = 'bold 80px Comic Sans MS';
+            ctx.textAlign = 'center';
+            ctx.fillText('LEVEL ' + level, canvas.width/2, 200);
         }
 
         // Draw platforms
         function drawPlatform(p) {
-            // Platform with grass on top
             ctx.fillStyle = '#8B4513';
             ctx.fillRect(p.x, p.y + 10, p.width, p.height - 10);
-
-            // Grass top
             ctx.fillStyle = '#32CD32';
             ctx.fillRect(p.x, p.y, p.width, 15);
-
-            // Grass blades
-            ctx.strokeStyle = '#228B22';
-            ctx.lineWidth = 1;
-            for (let i = p.x; i < p.x + p.width; i += 10) {
-                ctx.beginPath();
-                ctx.moveTo(i + 2, p.y);
-                ctx.lineTo(i + 4, p.y - 5);
-                ctx.stroke();
-            }
-
-            // Border
             ctx.strokeStyle = '#5D2E0C';
             ctx.lineWidth = 2;
             ctx.strokeRect(p.x, p.y, p.width, p.height);
@@ -423,60 +375,114 @@
         function generateLevel(levelNum) {
             platforms = [];
             grapes = [];
+            enemies = [];
             grapesCollected = 0;
 
-            // Ground platform
+            // Ground
             platforms.push({x: 0, y: 430, width: 800, height: 70});
 
-            if (levelNum === 1) {
-                platforms.push({x: 100, y: 350, width: 120, height: 20});
-                platforms.push({x: 300, y: 300, width: 100, height: 20});
-                platforms.push({x: 500, y: 350, width: 120, height: 20});
-                platforms.push({x: 650, y: 280, width: 100, height: 20});
-
-                grapes.push({x: 150, y: 320, size: 12, collected: false});
-                grapes.push({x: 340, y: 270, size: 12, collected: false});
-                grapes.push({x: 550, y: 320, size: 12, collected: false});
-                grapes.push({x: 700, y: 250, size: 12, collected: false});
-                grapes.push({x: 400, y: 400, size: 12, collected: false});
-            } else if (levelNum === 2) {
-                platforms.push({x: 50, y: 370, width: 80, height: 20});
-                platforms.push({x: 180, y: 320, width: 80, height: 20});
-                platforms.push({x: 310, y: 270, width: 80, height: 20});
-                platforms.push({x: 440, y: 220, width: 80, height: 20});
-                platforms.push({x: 570, y: 270, width: 80, height: 20});
-                platforms.push({x: 700, y: 320, width: 80, height: 20});
-
-                grapes.push({x: 90, y: 340, size: 12, collected: false});
-                grapes.push({x: 220, y: 290, size: 12, collected: false});
-                grapes.push({x: 350, y: 240, size: 12, collected: false});
-                grapes.push({x: 480, y: 190, size: 12, collected: false});
-                grapes.push({x: 610, y: 240, size: 12, collected: false});
-                grapes.push({x: 740, y: 290, size: 12, collected: false});
-            } else {
-                // Random level generation for level 3+
-                const numPlatforms = 5 + levelNum;
-                const numGrapes = 4 + levelNum;
-
-                for (let i = 0; i < numPlatforms; i++) {
-                    platforms.push({
-                        x: 50 + Math.random() * 650,
-                        y: 200 + Math.random() * 180,
-                        width: 60 + Math.random() * 80,
-                        height: 20
-                    });
+            const configs = {
+                1: {
+                    platforms: [
+                        {x: 100, y: 350, width: 120, height: 20},
+                        {x: 300, y: 300, width: 100, height: 20},
+                        {x: 520, y: 350, width: 120, height: 20}
+                    ],
+                    grapes: [{x: 160, y: 320}, {x: 350, y: 270}, {x: 580, y: 320}, {x: 400, y: 400}],
+                    enemies: [{x: 600, y: 360, minX: 520, maxX: 640, speed: 1.5}]
+                },
+                2: {
+                    platforms: [
+                        {x: 50, y: 370, width: 100, height: 20},
+                        {x: 200, y: 310, width: 100, height: 20},
+                        {x: 350, y: 250, width: 100, height: 20},
+                        {x: 500, y: 310, width: 100, height: 20},
+                        {x: 650, y: 370, width: 100, height: 20}
+                    ],
+                    grapes: [{x: 100, y: 340}, {x: 250, y: 280}, {x: 400, y: 220}, {x: 550, y: 280}, {x: 700, y: 340}],
+                    enemies: [
+                        {x: 200, y: 240, minX: 200, maxX: 300, speed: 2},
+                        {x: 500, y: 240, minX: 500, maxX: 600, speed: 2}
+                    ]
+                },
+                3: {
+                    platforms: [
+                        {x: 0, y: 350, width: 150, height: 20},
+                        {x: 200, y: 280, width: 80, height: 20},
+                        {x: 330, y: 350, width: 80, height: 20},
+                        {x: 460, y: 280, width: 80, height: 20},
+                        {x: 590, y: 200, width: 80, height: 20},
+                        {x: 700, y: 280, width: 100, height: 20}
+                    ],
+                    grapes: [{x: 75, y: 320}, {x: 240, y: 250}, {x: 370, y: 320}, {x: 500, y: 250}, {x: 630, y: 170}, {x: 750, y: 250}],
+                    enemies: [
+                        {x: 0, y: 280, minX: 0, maxX: 150, speed: 2.5},
+                        {x: 330, y: 280, minX: 330, maxX: 410, speed: 3},
+                        {x: 700, y: 210, minX: 700, maxX: 800, speed: 2}
+                    ]
+                },
+                4: {
+                    platforms: [
+                        {x: 50, y: 380, width: 80, height: 20},
+                        {x: 180, y: 320, width: 80, height: 20},
+                        {x: 310, y: 260, width: 80, height: 20},
+                        {x: 440, y: 200, width: 80, height: 20},
+                        {x: 310, y: 140, width: 180, height: 20},
+                        {x: 570, y: 260, width: 80, height: 20},
+                        {x: 700, y: 320, width: 80, height: 20}
+                    ],
+                    grapes: [{x: 90, y: 350}, {x: 220, y: 290}, {x: 350, y: 230}, {x: 480, y: 170}, {x: 400, y: 110}, {x: 610, y: 230}, {x: 740, y: 290}],
+                    enemies: [
+                        {x: 310, y: 70, minX: 310, maxX: 490, speed: 3},
+                        {x: 180, y: 250, minX: 180, maxX: 260, speed: 2.5},
+                        {x: 570, y: 190, minX: 570, maxX: 650, speed: 3},
+                        {x: 400, y: 360, minX: 200, maxX: 600, speed: 4}
+                    ]
+                },
+                5: {
+                    platforms: [
+                        {x: 0, y: 380, width: 100, height: 20},
+                        {x: 150, y: 320, width: 60, height: 20},
+                        {x: 260, y: 260, width: 60, height: 20},
+                        {x: 370, y: 200, width: 60, height: 20},
+                        {x: 480, y: 140, width: 60, height: 20},
+                        {x: 590, y: 200, width: 60, height: 20},
+                        {x: 700, y: 260, width: 100, height: 20},
+                        {x: 350, y: 350, width: 100, height: 20}
+                    ],
+                    grapes: [{x: 50, y: 350}, {x: 180, y: 290}, {x: 290, y: 230}, {x: 400, y: 170}, {x: 510, y: 110}, {x: 620, y: 170}, {x: 750, y: 230}, {x: 400, y: 320}],
+                    enemies: [
+                        {x: 0, y: 310, minX: 0, maxX: 100, speed: 3},
+                        {x: 350, y: 280, minX: 350, maxX: 450, speed: 3.5},
+                        {x: 700, y: 190, minX: 700, maxX: 800, speed: 3},
+                        {x: 200, y: 360, minX: 100, maxX: 350, speed: 4},
+                        {x: 500, y: 360, minX: 450, maxX: 700, speed: 4.5}
+                    ]
                 }
+            };
 
-                for (let i = 0; i < numGrapes; i++) {
-                    const plat = platforms[1 + Math.floor(Math.random() * (platforms.length - 1))];
-                    grapes.push({
-                        x: plat.x + plat.width / 2,
-                        y: plat.y - 30,
-                        size: 12,
-                        collected: false
-                    });
-                }
-            }
+            const config = configs[levelNum] || configs[5];
+
+            config.platforms.forEach(p => {
+                platforms.push({x: p.x, y: p.y, width: p.width, height: p.height});
+            });
+
+            config.grapes.forEach(g => {
+                grapes.push({x: g.x, y: g.y, size: 12, collected: false});
+            });
+
+            config.enemies.forEach(e => {
+                enemies.push({
+                    x: e.x,
+                    y: e.y,
+                    width: 50,
+                    height: 70,
+                    minX: e.minX,
+                    maxX: e.maxX,
+                    speed: e.speed,
+                    facing: 1
+                });
+            });
 
             totalGrapes = grapes.length;
             duck.x = 50;
@@ -485,18 +491,14 @@
             duck.vy = 0;
         }
 
-        // Check collision between duck and platform
         function checkPlatformCollision() {
             duck.onGround = false;
-
             for (const p of platforms) {
-                // Check if duck is above platform and falling
                 if (duck.x + duck.width > p.x &&
                     duck.x < p.x + p.width &&
                     duck.y + duck.height > p.y &&
                     duck.y + duck.height < p.y + p.height + duck.vy + 5 &&
                     duck.vy >= 0) {
-
                     duck.y = p.y - duck.height;
                     duck.vy = 0;
                     duck.onGround = true;
@@ -504,40 +506,88 @@
             }
         }
 
-        // Check grape collection
         function checkGrapeCollection() {
             for (const grape of grapes) {
                 if (!grape.collected) {
                     const dx = (duck.x + duck.width/2) - grape.x;
                     const dy = (duck.y + duck.height/2) - grape.y;
                     const dist = Math.sqrt(dx*dx + dy*dy);
-
                     if (dist < 40) {
                         grape.collected = true;
                         grapesCollected++;
-                        showMessage("Got a grape!");
+                        totalGrapesCollected++;
+                        showMessage("Got a grape! 🍇");
 
                         if (grapesCollected === totalGrapes) {
-                            showMessage("Level Complete! Got any grapes? YES!");
-                            setTimeout(() => {
-                                level++;
-                                generateLevel(level);
-                            }, 2000);
+                            if (level >= MAX_LEVEL) {
+                                showMessage("🎉 YOU WIN! Got ALL the grapes! 🎉");
+                                setTimeout(() => {
+                                    gameRunning = false;
+                                    document.getElementById('totalGrapes').textContent = totalGrapesCollected;
+                                    winScreen.classList.remove('hidden');
+                                }, 1500);
+                            } else {
+                                showMessage("Level Complete! 🌟");
+                                setTimeout(() => {
+                                    level++;
+                                    generateLevel(level);
+                                }, 1500);
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Show message
-        function showMessage(msg) {
-            gameMessage = msg;
-            messageTimer = 120;
+        function checkEnemyCollision() {
+            if (invincibleTimer > 0) return;
+
+            for (const enemy of enemies) {
+                if (duck.x < enemy.x + enemy.width &&
+                    duck.x + duck.width > enemy.x &&
+                    duck.y < enemy.y + enemy.height &&
+                    duck.y + duck.height > enemy.y) {
+
+                    lives--;
+                    invincibleTimer = 120; // 2 seconds of invincibility
+                    showMessage("Ouch! No grapes here! 😠");
+
+                    // Knockback
+                    duck.vy = -10;
+                    duck.vx = duck.x < enemy.x ? -8 : 8;
+
+                    if (lives <= 0) {
+                        gameRunning = false;
+                        document.getElementById('finalGrapes').textContent = totalGrapesCollected;
+                        gameOverScreen.classList.remove('hidden');
+                    }
+                }
+            }
         }
 
-        // Update game
+        function updateEnemies() {
+            for (const enemy of enemies) {
+                enemy.x += enemy.speed * enemy.facing;
+
+                if (enemy.x <= enemy.minX) {
+                    enemy.x = enemy.minX;
+                    enemy.facing = 1;
+                } else if (enemy.x + enemy.width >= enemy.maxX) {
+                    enemy.x = enemy.maxX - enemy.width;
+                    enemy.facing = -1;
+                }
+            }
+        }
+
+        function showMessage(msg) {
+            gameMessage = msg;
+            messageTimer = 90;
+        }
+
         function update() {
-            // Input handling
+            if (!gameRunning) return;
+
+            // Input
             if (keys['ArrowLeft'] || keys['KeyA']) {
                 duck.vx = -duck.speed;
                 duck.facing = -1;
@@ -553,116 +603,96 @@
                 duck.onGround = false;
             }
 
-            // Apply gravity
             duck.vy += gravity;
-
-            // Update position
             duck.x += duck.vx;
             duck.y += duck.vy;
 
-            // Screen boundaries
+            // Boundaries
             if (duck.x < 0) duck.x = 0;
             if (duck.x + duck.width > canvas.width) duck.x = canvas.width - duck.width;
 
-            // Fall off screen - reset
+            // Fall off screen
             if (duck.y > canvas.height + 50) {
-                duck.x = 50;
-                duck.y = 350;
-                duck.vy = 0;
-                showMessage("Whoops! Try again!");
-            }
-
-            // Walk animation
-            if (Math.abs(duck.vx) > 0.5) {
-                duck.walkTimer++;
-                if (duck.walkTimer > 5) {
-                    duck.walkFrame++;
-                    duck.walkTimer = 0;
+                lives--;
+                if (lives <= 0) {
+                    gameRunning = false;
+                    document.getElementById('finalGrapes').textContent = totalGrapesCollected;
+                    gameOverScreen.classList.remove('hidden');
+                } else {
+                    duck.x = 50;
+                    duck.y = 350;
+                    duck.vy = 0;
+                    invincibleTimer = 60;
+                    showMessage("Whoops! Try again!");
                 }
-            } else {
-                duck.walkFrame = 0;
             }
 
-            // Collisions
+            // Invincibility timer
+            if (invincibleTimer > 0) invincibleTimer--;
+
             checkPlatformCollision();
             checkGrapeCollection();
-
-            // Message timer
-            if (messageTimer > 0) messageTimer--;
+            updateEnemies();
+            checkEnemyCollision();
 
             // Update UI
             grapeCountEl.textContent = grapesCollected + '/' + totalGrapes;
             levelNumEl.textContent = level;
+            livesEl.textContent = lives;
+
+            if (messageTimer > 0) messageTimer--;
         }
 
-        // Draw game
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             drawBackground();
 
-            // Draw platforms
+            // Platforms
             for (const p of platforms) {
-                if (p.y < 430) { // Don't draw ground as platform
-                    drawPlatform(p);
-                }
+                if (p.y < 430) drawPlatform(p);
             }
 
-            // Draw lemonade stand
-            drawLemonadeStand(lemonadeStand.x, lemonadeStand.y);
-
-            // Draw grapes
+            // Grapes
             for (const grape of grapes) {
-                if (!grape.collected) {
-                    drawGrape(grape.x, grape.y, grape.size);
-                }
+                if (!grape.collected) drawGrape(grape.x, grape.y, grape.size);
             }
 
-            // Draw duck
-            drawDuck(duck.x, duck.y, duck.facing, duck.walkFrame);
+            // Enemies
+            for (const enemy of enemies) {
+                drawEnemy(enemy);
+            }
 
-            // Draw message
+            // Duck
+            drawDuck(duck.x, duck.y, duck.facing);
+
+            // Message
             if (messageTimer > 0) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(200, 20, 400, 50);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(150, 20, 500, 50);
                 ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 24px Comic Sans MS';
+                ctx.font = 'bold 22px Comic Sans MS';
                 ctx.textAlign = 'center';
                 ctx.fillText(gameMessage, 400, 52);
             }
-
-            // Speech bubble from lemonade man
-            if (duck.x > 500 && duck.x < 700 && duck.y > 350) {
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.ellipse(680, 250, 70, 30, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                // Speech bubble tail
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.moveTo(660, 275);
-                ctx.lineTo(670, 290);
-                ctx.lineTo(680, 275);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.fillStyle = '#000';
-                ctx.font = 'bold 12px Comic Sans MS';
-                ctx.textAlign = 'center';
-                ctx.fillText("We only sell", 680, 245);
-                ctx.fillText("LEMONADE!", 680, 260);
-            }
         }
 
-        // Game loop
         function gameLoop() {
             update();
             draw();
             requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            winScreen.classList.add('hidden');
+
+            level = 1;
+            lives = 3;
+            totalGrapesCollected = 0;
+            invincibleTimer = 0;
+            generateLevel(1);
+            gameRunning = true;
         }
 
         // Event listeners
@@ -677,7 +707,7 @@
             keys[e.code] = false;
         });
 
-        // Start game
+        // Initialize
         generateLevel(1);
         gameLoop();
     </script>
