@@ -171,12 +171,12 @@
         </div>
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         <div id="instructions">
-            Arrow Keys / WASD to move | SPACE to jump | Mobile: Tilt to move, Tap to jump!
+            Arrow Keys / WASD to move | SPACE to jump | Collect grapes & reach the end!
         </div>
 
         <div id="startScreen">
             <h1 style="color: #FFD700; font-size: 36px;">The Duck Song Game</h1>
-            <p style="margin: 20px 0; font-size: 18px;">Help the duck collect grapes!<br>Visit the lemonade stand along the way.</p>
+            <p style="margin: 20px 0; font-size: 18px;">Help the duck collect grapes!<br>Collect all grapes & reach the end of each level.</p>
             <p style="color: #aaa;">Desktop: Arrow Keys / WASD + Space<br>Mobile: Tilt to move, Tap to jump!<br><span style="font-size: 12px;">(Or tap left/right sides to move)</span></p>
             <div style="margin: 15px 0; width: 100%;">
                 <label style="color: #aaa; font-size: 14px;">Tilt Sensitivity: <span id="sensitivityValue">50</span>%</label>
@@ -251,12 +251,68 @@
         let gameMessage = '';
         let messageTimer = 0;
         let musicPlaying = false;
+        let levelCompleting = false;  // Prevent multiple level completions
 
         // Demo AI state
         let targetGrape = null;
         let demoJumpCooldown = 0;
 
         const MAX_LEVEL = 5;
+
+        // ========================================
+        // WORLD & CAMERA SYSTEM
+        // ========================================
+        let worldWidth = 2000;  // World extends beyond viewport
+        const camera = { x: 0, y: 0 };
+        let sceneryElements = [];  // Background objects
+
+        // Scene definitions with distinct visuals
+        const SCENES = {
+            COUNTRYSIDE: {
+                name: 'countryside',
+                skyColors: ['#87CEEB', '#B0E0E6'],
+                hillColor: '#3CB371',
+                groundColor: '#32CD32',
+                groundAccent: '#228B22',
+                horizonY: 0.6
+            },
+            SUBURBS: {
+                name: 'suburbs',
+                skyColors: ['#87CEEB', '#A8C8E8'],
+                hillColor: '#5D8C5D',
+                groundColor: '#808080',  // Sidewalk
+                groundAccent: '#606060',
+                horizonY: 0.55
+            },
+            DOWNTOWN: {
+                name: 'downtown',
+                skyColors: ['#6B8CAE', '#8899AA'],
+                hillColor: '#4A4A4A',
+                groundColor: '#505050',  // Street
+                groundAccent: '#404040',
+                horizonY: 0.5
+            }
+        };
+
+        // Get scene based on world X position
+        function getCurrentScene(worldX) {
+            const segment = worldWidth / 3;
+            if (worldX < segment) return SCENES.COUNTRYSIDE;
+            if (worldX < segment * 2) return SCENES.SUBURBS;
+            return SCENES.DOWNTOWN;
+        }
+
+        // Convert world coords to screen coords
+        function worldToScreen(wx, wy) {
+            return { x: wx - camera.x, y: wy };
+        }
+
+        // Update camera to follow duck
+        function updateCamera() {
+            // Keep duck at 30% from left edge
+            const targetX = duck.x - canvas.width * 0.3;
+            camera.x = Math.max(0, Math.min(targetX, worldWidth - canvas.width));
+        }
 
         // Duck player (positions will be in screen coords)
         const duck = {
@@ -290,6 +346,508 @@
                 bgMusic.play().catch(e => console.log('Audio play failed:', e));
                 musicBtn.textContent = 'Music: ON';
                 musicPlaying = true;
+            }
+        }
+
+        // ========================================
+        // NEW GRAPHICS FUNCTIONS
+        // ========================================
+
+        // Draw a tree (countryside)
+        function drawTree(x, y, size) {
+            const s = size * scale;
+            // Trunk
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(x - 7 * s, y, 14 * s, 50 * s);
+            // Foliage
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.arc(x, y - 10 * s, 35 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x - 20 * s, y + 5 * s, 25 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 20 * s, y + 5 * s, 25 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw a shrub (small bush)
+        function drawShrub(x, y, size) {
+            const s = (size || 1) * scale;
+            ctx.fillStyle = '#2E8B57';
+            ctx.beginPath();
+            ctx.arc(x, y - 8 * s, 15 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x - 10 * s, y - 3 * s, 10 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 10 * s, y - 3 * s, 10 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw a flower
+        function drawFlower(x, y, color) {
+            const s = scale;
+            // Stem
+            ctx.strokeStyle = '#228B22';
+            ctx.lineWidth = 2 * s;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y - 15 * s);
+            ctx.stroke();
+            // Petals
+            ctx.fillStyle = color || '#FF69B4';
+            for (let i = 0; i < 5; i++) {
+                const angle = (i / 5) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(angle) * 5 * s, y - 15 * s + Math.sin(angle) * 5 * s, 4 * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            // Center
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(x, y - 15 * s, 3 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw a picket fence section
+        function drawFence(x, y, width) {
+            const s = scale;
+            const postSpacing = 20 * s;
+            ctx.fillStyle = '#F5F5DC';
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 1;
+            // Horizontal rails
+            ctx.fillRect(x, y - 25 * s, width, 5 * s);
+            ctx.fillRect(x, y - 10 * s, width, 5 * s);
+            // Pickets
+            for (let px = x; px < x + width; px += postSpacing) {
+                ctx.fillStyle = '#F5F5DC';
+                ctx.beginPath();
+                ctx.moveTo(px, y);
+                ctx.lineTo(px, y - 35 * s);
+                ctx.lineTo(px + 5 * s, y - 40 * s);
+                ctx.lineTo(px + 10 * s, y - 35 * s);
+                ctx.lineTo(px + 10 * s, y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        // Draw a suburban house
+        function drawHouse(x, y, style) {
+            const s = scale;
+            const width = (80 + style * 20) * s;
+            const height = (60 + style * 10) * s;
+            const colors = ['#D2691E', '#8B0000', '#4169E1', '#2F4F4F'];
+            const roofColors = ['#8B4513', '#A52A2A', '#696969', '#2F2F2F'];
+
+            // House body
+            ctx.fillStyle = colors[style % colors.length];
+            ctx.fillRect(x - width/2, y - height, width, height);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - width/2, y - height, width, height);
+
+            // Roof
+            ctx.fillStyle = roofColors[style % roofColors.length];
+            ctx.beginPath();
+            ctx.moveTo(x - width/2 - 10 * s, y - height);
+            ctx.lineTo(x, y - height - 40 * s);
+            ctx.lineTo(x + width/2 + 10 * s, y - height);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Door
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(x - 10 * s, y - 40 * s, 20 * s, 40 * s);
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(x + 5 * s, y - 20 * s, 2 * s, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Windows
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(x - width/2 + 10 * s, y - height + 15 * s, 15 * s, 15 * s);
+            ctx.fillRect(x + width/2 - 25 * s, y - height + 15 * s, 15 * s, 15 * s);
+            ctx.strokeStyle = '#FFF';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - width/2 + 10 * s, y - height + 15 * s, 15 * s, 15 * s);
+            ctx.strokeRect(x + width/2 - 25 * s, y - height + 15 * s, 15 * s, 15 * s);
+        }
+
+        // Draw a mailbox
+        function drawMailbox(x, y) {
+            const s = scale;
+            // Post
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(x - 3 * s, y - 35 * s, 6 * s, 35 * s);
+            // Box
+            ctx.fillStyle = '#4169E1';
+            ctx.fillRect(x - 12 * s, y - 50 * s, 24 * s, 18 * s);
+            // Flag
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(x + 12 * s, y - 50 * s, 3 * s, 12 * s);
+        }
+
+        // Draw a city building
+        function drawBuilding(x, y, width, height, style) {
+            const s = scale;
+            const w = width * s;
+            const h = height * s;
+            const colors = ['#708090', '#5F5F5F', '#4A4A4A', '#363636', '#2F4F4F'];
+
+            // Building body
+            ctx.fillStyle = colors[style % colors.length];
+            ctx.fillRect(x - w/2, y - h, w, h);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x - w/2, y - h, w, h);
+
+            // Windows grid
+            const windowSize = 12 * s;
+            const windowSpacing = 20 * s;
+            const margin = 15 * s;
+
+            for (let wy = y - h + margin; wy < y - margin; wy += windowSpacing) {
+                for (let wx = x - w/2 + margin; wx < x + w/2 - margin; wx += windowSpacing) {
+                    // Randomly lit windows
+                    const lit = Math.sin(wx * 0.1 + wy * 0.1 + style) > 0;
+                    ctx.fillStyle = lit ? '#FFFF99' : '#333';
+                    ctx.fillRect(wx, wy, windowSize, windowSize);
+                }
+            }
+
+            // Rooftop details
+            if (style % 2 === 0) {
+                // Water tower
+                ctx.fillStyle = '#4A4A4A';
+                ctx.fillRect(x - 8 * s, y - h - 20 * s, 16 * s, 20 * s);
+            } else {
+                // Antenna
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, y - h);
+                ctx.lineTo(x, y - h - 30 * s);
+                ctx.stroke();
+            }
+        }
+
+        // Draw a lamp post
+        function drawLampPost(x, y) {
+            const s = scale;
+            // Pole
+            ctx.fillStyle = '#2F2F2F';
+            ctx.fillRect(x - 3 * s, y - 80 * s, 6 * s, 80 * s);
+            // Lamp head
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x - 12 * s, y - 85 * s, 24 * s, 8 * s);
+            // Light glow
+            const gradient = ctx.createRadialGradient(x, y - 80 * s, 0, x, y - 80 * s, 40 * s);
+            gradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y - 70 * s, 40 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw a fire hydrant
+        function drawFireHydrant(x, y) {
+            const s = scale;
+            ctx.fillStyle = '#FF0000';
+            // Body
+            ctx.fillRect(x - 6 * s, y - 25 * s, 12 * s, 25 * s);
+            // Top
+            ctx.beginPath();
+            ctx.arc(x, y - 25 * s, 8 * s, Math.PI, 0);
+            ctx.fill();
+            // Side nozzles
+            ctx.fillRect(x - 12 * s, y - 18 * s, 6 * s, 6 * s);
+            ctx.fillRect(x + 6 * s, y - 18 * s, 6 * s, 6 * s);
+        }
+
+        // Draw a bench
+        function drawBench(x, y) {
+            const s = scale;
+            ctx.fillStyle = '#8B4513';
+            // Seat
+            ctx.fillRect(x - 25 * s, y - 18 * s, 50 * s, 6 * s);
+            // Back
+            ctx.fillRect(x - 25 * s, y - 35 * s, 50 * s, 5 * s);
+            // Legs
+            ctx.fillRect(x - 22 * s, y - 18 * s, 4 * s, 18 * s);
+            ctx.fillRect(x + 18 * s, y - 18 * s, 4 * s, 18 * s);
+            // Back supports
+            ctx.fillRect(x - 22 * s, y - 35 * s, 4 * s, 17 * s);
+            ctx.fillRect(x + 18 * s, y - 35 * s, 4 * s, 17 * s);
+        }
+
+        // Draw a street sign
+        function drawStreetSign(x, y, text) {
+            const s = scale;
+            // Pole
+            ctx.fillStyle = '#4A4A4A';
+            ctx.fillRect(x - 2 * s, y - 60 * s, 4 * s, 60 * s);
+            // Sign
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(x - 30 * s, y - 70 * s, 60 * s, 15 * s);
+            ctx.fillStyle = '#FFF';
+            ctx.font = `bold ${8 * s}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText(text || 'MAIN ST', x, y - 60 * s);
+        }
+
+        // Draw finish banner/flag at end of level
+        function drawFinishBanner(x, y) {
+            const s = scale;
+            // Pole
+            ctx.fillStyle = '#4A4A4A';
+            ctx.fillRect(x - 3 * s, y - 120 * s, 6 * s, 120 * s);
+            // Banner
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.moveTo(x + 3 * s, y - 120 * s);
+            ctx.lineTo(x + 60 * s, y - 100 * s);
+            ctx.lineTo(x + 3 * s, y - 80 * s);
+            ctx.closePath();
+            ctx.fill();
+            // Checkered pattern
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(x + 10 * s, y - 115 * s, 15 * s, 10 * s);
+            ctx.fillRect(x + 25 * s, y - 105 * s, 15 * s, 10 * s);
+            ctx.fillRect(x + 10 * s, y - 95 * s, 15 * s, 10 * s);
+            // Text
+            ctx.fillStyle = '#FFD700';
+            ctx.font = `bold ${10 * s}px Comic Sans MS`;
+            ctx.textAlign = 'center';
+            ctx.fillText('FINISH', x + 25 * s, y - 70 * s);
+        }
+
+        // Draw a cloud
+        function drawCloud(x, y, size) {
+            const s = size * scale;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(x, y, 20 * s, 0, Math.PI * 2);
+            ctx.arc(x + 25 * s, y - 5 * s, 25 * s, 0, Math.PI * 2);
+            ctx.arc(x + 50 * s, y, 20 * s, 0, Math.PI * 2);
+            ctx.arc(x + 15 * s, y + 10 * s, 15 * s, 0, Math.PI * 2);
+            ctx.arc(x + 35 * s, y + 8 * s, 18 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw scenery element based on type
+        function drawSceneryElement(elem, screenX) {
+            const groundY = canvas.height * 0.86;
+            switch (elem.type) {
+                case 'tree':
+                    drawTree(screenX, groundY, elem.size || 1);
+                    break;
+                case 'shrub':
+                    drawShrub(screenX, groundY, elem.size || 1);
+                    break;
+                case 'flower':
+                    drawFlower(screenX, groundY, elem.color);
+                    break;
+                case 'fence':
+                    drawFence(screenX, groundY, elem.width * scale);
+                    break;
+                case 'house':
+                    drawHouse(screenX, groundY, elem.style);
+                    break;
+                case 'mailbox':
+                    drawMailbox(screenX, groundY);
+                    break;
+                case 'building':
+                    drawBuilding(screenX, groundY, elem.width, elem.height, elem.style);
+                    break;
+                case 'lamppost':
+                    drawLampPost(screenX, groundY);
+                    break;
+                case 'hydrant':
+                    drawFireHydrant(screenX, groundY);
+                    break;
+                case 'bench':
+                    drawBench(screenX, groundY);
+                    break;
+                case 'sign':
+                    drawStreetSign(screenX, groundY, elem.text);
+                    break;
+                case 'finishBanner':
+                    drawFinishBanner(screenX, groundY);
+                    break;
+            }
+        }
+
+        // ========================================
+        // PARALLAX BACKGROUND DRAWING
+        // ========================================
+
+        // Draw sky layer with parallax
+        function drawSkyLayer(parallaxOffset) {
+            const scene = getCurrentScene(camera.x + canvas.width / 2);
+            const horizonY = canvas.height * scene.horizonY;
+
+            // Sky gradient
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, horizonY);
+            skyGradient.addColorStop(0, scene.skyColors[0]);
+            skyGradient.addColorStop(1, scene.skyColors[1]);
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, horizonY);
+
+            // Sun (moves slowly with parallax)
+            const sunX = canvas.width * 0.85 - parallaxOffset * 0.3;
+            const sunY = canvas.height * 0.12;
+            const sunR = 35 * scale;
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+            ctx.fill();
+
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3 * scale;
+                ctx.beginPath();
+                ctx.moveTo(sunX + Math.cos(angle) * sunR * 1.15, sunY + Math.sin(angle) * sunR * 1.15);
+                ctx.lineTo(sunX + Math.cos(angle) * sunR * 1.6, sunY + Math.sin(angle) * sunR * 1.6);
+                ctx.stroke();
+            }
+
+            // Clouds (very slow parallax)
+            const cloudOffset = parallaxOffset * 0.05;
+            drawCloud(100 - cloudOffset % 400, 60 * scaleY, 0.8);
+            drawCloud(350 - cloudOffset % 400, 40 * scaleY, 1);
+            drawCloud(600 - cloudOffset % 400, 70 * scaleY, 0.6);
+        }
+
+        // Draw far background layer (distant hills/buildings)
+        function drawFarLayer(parallaxOffset) {
+            const scene = getCurrentScene(camera.x + canvas.width / 2);
+            const horizonY = canvas.height * scene.horizonY;
+            const groundY = canvas.height * 0.86;
+
+            if (scene.name === 'downtown') {
+                // City skyline silhouette
+                ctx.fillStyle = '#3A3A3A';
+                const buildingData = [
+                    {x: 0, w: 80, h: 120},
+                    {x: 100, w: 60, h: 80},
+                    {x: 180, w: 100, h: 150},
+                    {x: 300, w: 70, h: 100},
+                    {x: 400, w: 90, h: 130},
+                    {x: 520, w: 60, h: 90},
+                    {x: 600, w: 110, h: 160},
+                    {x: 740, w: 80, h: 110}
+                ];
+                for (const b of buildingData) {
+                    const bx = ((b.x - parallaxOffset * 0.5) % 900 + 900) % 900;
+                    ctx.fillRect(bx * scaleX, horizonY - b.h * scaleY * 0.5, b.w * scaleX, b.h * scaleY * 0.5);
+                }
+            } else {
+                // Rolling hills
+                ctx.fillStyle = scene.hillColor;
+                ctx.beginPath();
+                ctx.moveTo(0, horizonY);
+
+                const hillCount = 4;
+                for (let i = 0; i <= hillCount; i++) {
+                    const hx = (i / hillCount) * canvas.width;
+                    const offset = ((parallaxOffset * 0.3) + i * 200) % 400;
+                    const hillHeight = 50 + Math.sin(offset * 0.02) * 30;
+                    ctx.quadraticCurveTo(
+                        hx + canvas.width / (hillCount * 2),
+                        horizonY - hillHeight * scaleY,
+                        hx + canvas.width / hillCount,
+                        horizonY
+                    );
+                }
+                ctx.lineTo(canvas.width, groundY);
+                ctx.lineTo(0, groundY);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        // Draw mid layer (trees, houses in distance)
+        function drawMidLayer(parallaxOffset) {
+            const scene = getCurrentScene(camera.x + canvas.width / 2);
+            const horizonY = canvas.height * scene.horizonY;
+
+            if (scene.name === 'countryside') {
+                // Distant trees
+                ctx.fillStyle = '#2E7D32';
+                for (let i = 0; i < 8; i++) {
+                    const tx = ((i * 150 - parallaxOffset * 0.4) % 1200 + 1200) % 1200;
+                    ctx.beginPath();
+                    ctx.arc(tx, horizonY + 20 * scaleY, 30 * scale, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (scene.name === 'suburbs') {
+                // Distant houses
+                ctx.fillStyle = '#8B7355';
+                for (let i = 0; i < 6; i++) {
+                    const hx = ((i * 180 - parallaxOffset * 0.4) % 1100 + 1100) % 1100;
+                    ctx.fillRect(hx, horizonY - 20 * scaleY, 40 * scaleX, 30 * scaleY);
+                    // Small roof
+                    ctx.beginPath();
+                    ctx.moveTo(hx - 5 * scaleX, horizonY - 20 * scaleY);
+                    ctx.lineTo(hx + 20 * scaleX, horizonY - 40 * scaleY);
+                    ctx.lineTo(hx + 45 * scaleX, horizonY - 20 * scaleY);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Draw ground layer
+        function drawGroundLayer() {
+            const groundY = canvas.height * 0.86;
+            const scene = getCurrentScene(camera.x + canvas.width / 2);
+
+            // Ground fill
+            ctx.fillStyle = scene.groundColor;
+            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+
+            // Ground texture
+            ctx.strokeStyle = scene.groundAccent;
+            ctx.lineWidth = 1;
+
+            if (scene.name === 'countryside') {
+                // Grass blades
+                for (let i = 0; i < canvas.width; i += 15 * scale) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, groundY);
+                    ctx.lineTo(i + 3 * scale, groundY - 5 * scaleY);
+                    ctx.moveTo(i + 7 * scale, groundY);
+                    ctx.lineTo(i + 10 * scale, groundY - 7 * scaleY);
+                    ctx.stroke();
+                }
+            } else if (scene.name === 'suburbs') {
+                // Sidewalk lines
+                ctx.strokeStyle = '#999';
+                for (let i = -camera.x % (60 * scale); i < canvas.width; i += 60 * scale) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, groundY);
+                    ctx.lineTo(i, canvas.height);
+                    ctx.stroke();
+                }
+            } else {
+                // Street markings
+                ctx.strokeStyle = '#FFFF00';
+                ctx.lineWidth = 3 * scale;
+                ctx.setLineDash([30 * scale, 20 * scale]);
+                ctx.beginPath();
+                ctx.moveTo(0, groundY + 30 * scaleY);
+                ctx.lineTo(canvas.width, groundY + 30 * scaleY);
+                ctx.stroke();
+                ctx.setLineDash([]);
             }
         }
 
@@ -409,12 +967,542 @@
             });
         }
 
-        // Draw lemonade stand (scaled) - positioned on the ground
-        function drawLemonadeStand() {
+
+        // Draw platforms (already in screen coords)
+        function drawPlatform(p) {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(p.x, p.y + 10 * scaleY, p.width, p.height - 10 * scaleY);
+
+            ctx.fillStyle = '#32CD32';
+            ctx.fillRect(p.x, p.y, p.width, 15 * scaleY);
+
+            ctx.strokeStyle = '#228B22';
+            ctx.lineWidth = 1;
+            for (let i = p.x; i < p.x + p.width; i += 10 * scale) {
+                ctx.beginPath();
+                ctx.moveTo(i + 2 * scale, p.y);
+                ctx.lineTo(i + 4 * scale, p.y - 5 * scaleY);
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#5D2E0C';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(p.x, p.y, p.width, p.height);
+        }
+
+        // Generate scrolling level with scenery
+        function generateLevel(levelNum) {
+            platforms = [];
+            grapes = [];
+            sceneryElements = [];
+            grapesCollected = 0;
+
+            // World gets longer each level
+            worldWidth = (1500 + levelNum * 500) * scaleX;
+
+            const groundY = canvas.height * 0.86;
+            const platHeight = 20 * scaleY;
+
+            // Ground platform spans entire world
+            platforms.push({x: 0, y: groundY, width: worldWidth, height: canvas.height - groundY, isGround: true});
+
+            // Level-specific scene themes
+            const levelThemes = {
+                1: 'countryside',  // Lemonade stand, trees, hills
+                2: 'suburbs',      // Houses, mailboxes, small trees
+                3: 'mixed',        // Transition - some houses, some buildings
+                4: 'downtown',     // Buildings, lamp posts
+                5: 'mainstreet'    // Full city with everything
+            };
+
+            const theme = levelThemes[levelNum] || 'mainstreet';
+
+            // Generate scenery based on theme
+            generateScenery(theme, levelNum);
+
+            // Generate platforms distributed across the world
+            const platformCount = 3 + levelNum * 2;
+            const spacing = worldWidth / (platformCount + 1);
+
+            for (let i = 0; i < platformCount; i++) {
+                const px = spacing * (i + 0.5 + Math.random() * 0.5);
+                const py = 0.45 + Math.random() * 0.25;  // Between 45% and 70% height
+                const pw = 0.08 + Math.random() * 0.05;  // Platform width
+
+                platforms.push({
+                    x: px,
+                    y: py * canvas.height,
+                    width: pw * canvas.width,
+                    height: platHeight
+                });
+            }
+
+            // Generate grapes distributed across the world
+            const grapeCount = 4 + levelNum * 2;
+            const grapeSpacing = worldWidth / (grapeCount + 1);
+
+            for (let i = 0; i < grapeCount; i++) {
+                const gx = grapeSpacing * (i + 0.3 + Math.random() * 0.4);
+
+                // Some grapes on ground, some elevated (near platforms)
+                let gy;
+                if (Math.random() > 0.4) {
+                    // Find a nearby platform
+                    const nearPlatform = platforms.find(p => !p.isGround &&
+                        Math.abs(p.x + p.width/2 - gx) < 150 * scaleX);
+                    if (nearPlatform) {
+                        gy = nearPlatform.y - 30 * scaleY;
+                    } else {
+                        gy = groundY - 40 * scaleY;
+                    }
+                } else {
+                    gy = groundY - 40 * scaleY;
+                }
+
+                grapes.push({
+                    x: gx,
+                    y: gy,
+                    size: 12,
+                    collected: false
+                });
+            }
+
+            totalGrapes = grapes.length;
+
+            // Reset duck and camera
+            duck.x = 50 * scaleX;
+            duck.y = groundY - duck.height - 10;
+            duck.vx = 0;
+            duck.vy = 0;
+            camera.x = 0;
+
+            // Update gravity based on screen height
+            gravity = 0.6 * scaleY;
+        }
+
+        // Generate scenery elements based on theme
+        function generateScenery(theme, levelNum) {
+            sceneryElements = [];
+            const colors = ['#FF69B4', '#FF6347', '#FFD700', '#9370DB', '#00CED1'];
+            const streetNames = ['MAIN ST', 'OAK AVE', 'PARK RD', 'ELM ST', 'GRAPE LN'];
+
+            for (let x = 100; x < worldWidth; x += 80 + Math.random() * 120) {
+                const worldPos = x / worldWidth;  // 0-1 position in world
+                const rand = Math.random();
+
+                // Theme-based scenery generation
+                if (theme === 'countryside' || (theme === 'mixed' && worldPos < 0.4)) {
+                    // Countryside elements
+                    if (rand < 0.25) {
+                        sceneryElements.push({type: 'tree', x: x, size: 0.8 + Math.random() * 0.4});
+                    } else if (rand < 0.4) {
+                        sceneryElements.push({type: 'shrub', x: x, size: 0.7 + Math.random() * 0.5});
+                    } else if (rand < 0.5) {
+                        sceneryElements.push({type: 'flower', x: x, color: colors[Math.floor(Math.random() * colors.length)]});
+                    } else if (rand < 0.55) {
+                        sceneryElements.push({type: 'fence', x: x, width: 80 + Math.random() * 40});
+                        x += 60;  // Skip ahead after fence
+                    }
+                } else if (theme === 'suburbs' || (theme === 'mixed' && worldPos < 0.7)) {
+                    // Suburban elements
+                    if (rand < 0.2) {
+                        sceneryElements.push({type: 'house', x: x, style: Math.floor(Math.random() * 4)});
+                        x += 100;  // Skip ahead after house
+                    } else if (rand < 0.35) {
+                        sceneryElements.push({type: 'tree', x: x, size: 0.6 + Math.random() * 0.3});
+                    } else if (rand < 0.45) {
+                        sceneryElements.push({type: 'mailbox', x: x});
+                    } else if (rand < 0.55) {
+                        sceneryElements.push({type: 'shrub', x: x, size: 0.5 + Math.random() * 0.3});
+                    } else if (rand < 0.6) {
+                        sceneryElements.push({type: 'lamppost', x: x});
+                    }
+                } else {
+                    // Downtown/city elements
+                    if (rand < 0.3) {
+                        sceneryElements.push({
+                            type: 'building',
+                            x: x,
+                            width: 80 + Math.random() * 60,
+                            height: 150 + Math.random() * 150,
+                            style: Math.floor(Math.random() * 5)
+                        });
+                        x += 120;  // Skip ahead after building
+                    } else if (rand < 0.45) {
+                        sceneryElements.push({type: 'lamppost', x: x});
+                    } else if (rand < 0.55) {
+                        sceneryElements.push({type: 'hydrant', x: x});
+                    } else if (rand < 0.65) {
+                        sceneryElements.push({type: 'bench', x: x});
+                    } else if (rand < 0.7) {
+                        sceneryElements.push({type: 'sign', x: x, text: streetNames[Math.floor(Math.random() * streetNames.length)]});
+                    }
+                }
+            }
+
+            // Always add lemonade stand near the start for level 1
+            if (levelNum === 1) {
+                // Mark position for lemonade stand
+                sceneryElements.push({type: 'lemonadeStand', x: 400 * scaleX});
+            }
+
+            // Add finish banner at the end of every level
+            sceneryElements.push({type: 'finishBanner', x: worldWidth - 80 * scaleX});
+
+            // Sort by x position for proper rendering order
+            sceneryElements.sort((a, b) => a.x - b.x);
+        }
+
+        function checkPlatformCollision() {
+            duck.onGround = false;
+
+            for (const p of platforms) {
+                if (duck.x + duck.width > p.x &&
+                    duck.x < p.x + p.width &&
+                    duck.y + duck.height > p.y &&
+                    duck.y + duck.height < p.y + p.height + duck.vy + 5 &&
+                    duck.vy >= 0) {
+
+                    duck.y = p.y - duck.height;
+                    duck.vy = 0;
+                    duck.onGround = true;
+                }
+            }
+        }
+
+        function checkGrapeCollection() {
+            for (const grape of grapes) {
+                if (!grape.collected) {
+                    const dx = (duck.x + duck.width/2) - grape.x;
+                    const dy = (duck.y + duck.height/2) - grape.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+
+                    if (dist < 40 * scale) {
+                        grape.collected = true;
+                        grapesCollected++;
+                        totalGrapesCollected++;
+                        showMessage("Got a grape!");
+
+                        // Check if all grapes collected - prompt to reach end
+                        if (grapesCollected === totalGrapes) {
+                            showMessage("All grapes! Reach the end!");
+                        }
+                    }
+                }
+            }
+        }
+
+        function showMessage(msg) {
+            gameMessage = msg;
+            messageTimer = 90;
+        }
+
+        // Demo AI - finds nearest uncollected grape and moves toward it
+        function updateDemoAI() {
+            if (!demoMode) return;
+
+            // Find nearest uncollected grape (within reasonable range for demo)
+            let nearestDist = Infinity;
+            targetGrape = null;
+            for (const grape of grapes) {
+                if (!grape.collected) {
+                    const dx = grape.x - (duck.x + duck.width/2);
+                    const dy = grape.y - (duck.y + duck.height/2);
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    // Prefer grapes ahead and not too far
+                    if (dist < nearestDist && dx > -200 * scaleX) {
+                        nearestDist = dist;
+                        targetGrape = grape;
+                    }
+                }
+            }
+
+            if (!targetGrape) {
+                // All grapes collected or none ahead, reset level for demo
+                generateLevel(level);
+                camera.x = 0;
+                return;
+            }
+
+            // Move toward target grape
+            const dx = targetGrape.x - (duck.x + duck.width/2);
+            const threshold = 20 * scaleX;
+
+            if (dx > threshold) {
+                duck.vx = duck.speed * 0.8;
+                duck.facing = 1;
+            } else if (dx < -threshold) {
+                duck.vx = -duck.speed * 0.8;
+                duck.facing = -1;
+            } else {
+                duck.vx *= friction;
+            }
+
+            // Jump logic
+            demoJumpCooldown--;
+            const needsToJumpUp = targetGrape.y < duck.y - 30 * scaleY;
+
+            // Check if there's a platform above we need to reach
+            let platformAbove = false;
+            for (const p of platforms) {
+                if (!p.isGround && p.y < duck.y && p.y > duck.y - 150 * scaleY &&
+                    duck.x + duck.width > p.x - 50 * scaleX && duck.x < p.x + p.width + 50 * scaleX) {
+                    platformAbove = true;
+                    break;
+                }
+            }
+
+            if (duck.onGround && demoJumpCooldown <= 0 && (needsToJumpUp || platformAbove)) {
+                duck.vy = duck.jumpForce;
+                duck.onGround = false;
+                demoJumpCooldown = 30;
+            }
+        }
+
+        function update() {
+            // Run demo mode even when game not started
+            if (demoMode && !gameRunning) {
+                updateDemoAI();
+            }
+
+            // Player input only when game is running (not demo)
+            if (gameRunning && !demoMode) {
+                if (keys['ArrowLeft'] || keys['KeyA'] || keys['tiltLeft'] || keys['touchLeft']) {
+                    duck.vx = -duck.speed * (keys['tiltLeft'] ? duck.tiltAmount : 1);
+                    duck.facing = -1;
+                } else if (keys['ArrowRight'] || keys['KeyD'] || keys['tiltRight'] || keys['touchRight']) {
+                    duck.vx = duck.speed * (keys['tiltRight'] ? duck.tiltAmount : 1);
+                    duck.facing = 1;
+                } else {
+                    duck.vx *= friction;
+                }
+
+                if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['touchJump']) && duck.onGround) {
+                    duck.vy = duck.jumpForce;
+                    duck.onGround = false;
+                    keys['touchJump'] = false; // Reset tap jump
+                }
+            }
+
+            duck.vy += gravity;
+            duck.x += duck.vx;
+            duck.y += duck.vy;
+
+            // Boundaries - world coordinates
+            if (duck.x < 0) duck.x = 0;
+            if (duck.x + duck.width > worldWidth) duck.x = worldWidth - duck.width;
+
+            // Fall off screen
+            if (duck.y > canvas.height + 50) {
+                const groundY = canvas.height * 0.86;
+                duck.x = 50 * scaleX;
+                duck.y = groundY - duck.height - 10;
+                duck.vy = 0;
+                camera.x = 0;
+                if (gameRunning) showMessage("Whoops! Try again!");
+            }
+
+            // Check if reached end of level
+            if (gameRunning && !levelCompleting && duck.x > worldWidth - 100 * scaleX && grapesCollected === totalGrapes) {
+                levelCompleting = true;
+                if (level >= MAX_LEVEL) {
+                    showMessage("You Win! Reached the city!");
+                    setTimeout(() => {
+                        gameRunning = false;
+                        levelCompleting = false;
+                        document.getElementById('totalGrapes').textContent = totalGrapesCollected;
+                        winScreen.classList.remove('hidden');
+                    }, 1500);
+                } else {
+                    showMessage("Level Complete! Onward!");
+                    setTimeout(() => {
+                        level++;
+                        levelCompleting = false;
+                        generateLevel(level);
+                    }, 1500);
+                }
+            }
+
+            // Walk animation
+            if (Math.abs(duck.vx) > 0.5) {
+                duck.walkTimer++;
+                if (duck.walkTimer > 5) {
+                    duck.walkFrame++;
+                    duck.walkTimer = 0;
+                }
+            } else {
+                duck.walkFrame = 0;
+            }
+
+            checkPlatformCollision();
+
+            // Only collect grapes and update UI when game is running
+            if (gameRunning) {
+                checkGrapeCollection();
+                grapeCountEl.textContent = grapesCollected + '/' + totalGrapes;
+                levelNumEl.textContent = level;
+            } else if (demoMode) {
+                // Demo mode grape collection (just for show, resets)
+                for (const grape of grapes) {
+                    if (!grape.collected) {
+                        const dx = (duck.x + duck.width/2) - grape.x;
+                        const dy = (duck.y + duck.height/2) - grape.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < 40 * scale) {
+                            grape.collected = true;
+                        }
+                    }
+                }
+            }
+
+            if (messageTimer > 0) messageTimer--;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update camera to follow duck
+            updateCamera();
+
+            const groundY = canvas.height * 0.86;
+
+            // Draw parallax background layers
+            drawSkyLayer(camera.x * 0.1);
+            drawFarLayer(camera.x * 0.3);
+            drawMidLayer(camera.x * 0.6);
+            drawGroundLayer();
+
+            // Level indicator (fixed on screen)
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.font = `bold ${50 * scale}px Comic Sans MS`;
+            ctx.textAlign = 'center';
+            ctx.fillText('LEVEL ' + level, canvas.width/2, canvas.height * 0.55);
+
+            // Draw scenery elements (with camera offset, culled for performance)
+            for (const elem of sceneryElements) {
+                const screenX = elem.x - camera.x;
+                // Only draw if on screen (with margin for large elements)
+                if (screenX > -200 * scale && screenX < canvas.width + 200 * scale) {
+                    if (elem.type === 'lemonadeStand') {
+                        drawLemonadeStandAt(screenX);
+                    } else {
+                        drawSceneryElement(elem, screenX);
+                    }
+                }
+            }
+
+            // Platforms (skip ground, apply camera offset)
+            for (const p of platforms) {
+                if (!p.isGround) {
+                    const screenX = p.x - camera.x;
+                    // Only draw if on screen
+                    if (screenX + p.width > 0 && screenX < canvas.width) {
+                        drawPlatform({...p, x: screenX});
+                    }
+                }
+            }
+
+            // Grapes (with camera offset)
+            for (const grape of grapes) {
+                if (!grape.collected) {
+                    const screenX = grape.x - camera.x;
+                    if (screenX > -30 && screenX < canvas.width + 30) {
+                        drawGrape(screenX, grape.y, grape.size);
+                    }
+                }
+            }
+
+            // Duck (with camera offset)
+            const duckScreenX = duck.x - camera.x;
+            drawDuck(duckScreenX, duck.y, duck.facing, duck.walkFrame);
+
+            // Speech bubble when near lemonade stand
+            const standElem = sceneryElements.find(e => e.type === 'lemonadeStand');
+            if (standElem) {
+                const standScreenX = standElem.x - camera.x;
+                if (Math.abs(duckScreenX - standScreenX) < 100 * scale && duck.y > canvas.height * 0.7) {
+                    const bubbleX = standScreenX + 60 * scale;
+                    const bubbleY = canvas.height * 0.5;
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.ellipse(bubbleX, bubbleY, 70 * scale, 30 * scale, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.moveTo(bubbleX - 20 * scale, bubbleY + 25 * scale);
+                    ctx.lineTo(bubbleX - 10 * scale, bubbleY + 40 * scale);
+                    ctx.lineTo(bubbleX, bubbleY + 25 * scale);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#000';
+                    ctx.font = `bold ${12 * scale}px Comic Sans MS`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText("We only sell", bubbleX, bubbleY - 5 * scale);
+                    ctx.fillText("LEMONADE!", bubbleX, bubbleY + 10 * scale);
+                }
+            }
+
+            // Progress indicator (how far through level)
+            const progress = Math.min(duck.x / (worldWidth - canvas.width * 0.5), 1);
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(10 * scale, canvas.height - 20 * scaleY, 100 * scale, 8 * scaleY);
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(10 * scale, canvas.height - 20 * scaleY, progress * 100 * scale, 8 * scaleY);
+
+            // End zone indicator (arrow pointing right at edge of screen when near end)
+            if (duck.x > worldWidth - canvas.width * 1.5) {
+                const arrowX = canvas.width - 30 * scale;
+                const arrowY = canvas.height * 0.5;
+                const pulse = Math.sin(Date.now() * 0.005) * 5 * scale;
+
+                // Arrow glow
+                ctx.fillStyle = grapesCollected === totalGrapes ? 'rgba(50, 205, 50, 0.5)' : 'rgba(255, 215, 0, 0.3)';
+                ctx.beginPath();
+                ctx.arc(arrowX + pulse, arrowY, 25 * scale, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Arrow
+                ctx.fillStyle = grapesCollected === totalGrapes ? '#32CD32' : '#FFD700';
+                ctx.beginPath();
+                ctx.moveTo(arrowX - 15 * scale + pulse, arrowY - 12 * scale);
+                ctx.lineTo(arrowX + 15 * scale + pulse, arrowY);
+                ctx.lineTo(arrowX - 15 * scale + pulse, arrowY + 12 * scale);
+                ctx.closePath();
+                ctx.fill();
+
+                // "FINISH" text when all grapes collected
+                if (grapesCollected === totalGrapes) {
+                    ctx.fillStyle = '#32CD32';
+                    ctx.font = `bold ${14 * scale}px Comic Sans MS`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText('FINISH!', arrowX, arrowY + 35 * scale);
+                }
+            }
+
+            // Message
+            if (messageTimer > 0) {
+                const msgW = 400 * scaleX;
+                const msgH = 50 * scaleY;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect((canvas.width - msgW) / 2, 20 * scaleY, msgW, msgH);
+                ctx.fillStyle = '#FFD700';
+                ctx.font = `bold ${24 * scale}px Comic Sans MS`;
+                ctx.textAlign = 'center';
+                ctx.fillText(gameMessage, canvas.width / 2, 20 * scaleY + msgH * 0.65);
+            }
+        }
+
+        // Draw lemonade stand at specific screen X position
+        function drawLemonadeStandAt(screenX) {
             const groundY = canvas.height * 0.86;
             const s = scale;
-            const x = canvas.width * 0.75 - 60 * s;
-            const y = groundY - 150 * s; // Stand base is 150*s tall (70 + 80)
+            const x = screenX - 60 * s;
+            const y = groundY - 150 * s;
 
             // Stand base
             ctx.fillStyle = '#8B4513';
@@ -496,465 +1584,6 @@
 
             ctx.fillStyle = '#4169E1';
             ctx.fillRect(x + 60*s, y + 45*s, 30*s, 25*s);
-        }
-
-        // Draw background (fully responsive)
-        function drawBackground() {
-            const groundY = canvas.height * 0.86; // Ground starts at 86% down
-            const horizonY = canvas.height * 0.6;  // Horizon at 60% down
-
-            // Sky gradient - fills to horizon
-            const skyGradient = ctx.createLinearGradient(0, 0, 0, horizonY);
-            skyGradient.addColorStop(0, '#87CEEB');
-            skyGradient.addColorStop(1, '#B0E0E6');
-            ctx.fillStyle = skyGradient;
-            ctx.fillRect(0, 0, canvas.width, horizonY);
-
-            // Sun (top right)
-            const sunX = canvas.width * 0.9;
-            const sunY = canvas.height * 0.12;
-            const sunR = 35 * scale;
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
-            ctx.fill();
-
-            for (let i = 0; i < 8; i++) {
-                const angle = (i / 8) * Math.PI * 2;
-                ctx.strokeStyle = '#FFD700';
-                ctx.lineWidth = 3 * scale;
-                ctx.beginPath();
-                ctx.moveTo(sunX + Math.cos(angle) * sunR * 1.15, sunY + Math.sin(angle) * sunR * 1.15);
-                ctx.lineTo(sunX + Math.cos(angle) * sunR * 1.6, sunY + Math.sin(angle) * sunR * 1.6);
-                ctx.stroke();
-            }
-
-            // Hills
-            ctx.fillStyle = '#3CB371';
-            ctx.beginPath();
-            ctx.moveTo(0, horizonY);
-            ctx.quadraticCurveTo(canvas.width * 0.25, horizonY - 70 * scaleY, canvas.width * 0.5, horizonY);
-            ctx.quadraticCurveTo(canvas.width * 0.75, horizonY - 70 * scaleY, canvas.width, horizonY);
-            ctx.lineTo(canvas.width, groundY);
-            ctx.lineTo(0, groundY);
-            ctx.closePath();
-            ctx.fill();
-
-            // City silhouette (left side)
-            ctx.fillStyle = '#696969';
-            const cityX = canvas.width * 0.06;
-            const cityY = horizonY - 20 * scaleY;
-            ctx.fillRect(cityX, cityY, 30 * scale, 70 * scaleY);
-            ctx.fillRect(cityX + 35 * scale, cityY + 20 * scaleY, 25 * scale, 50 * scaleY);
-            ctx.fillRect(cityX + 65 * scale, cityY - 10 * scaleY, 35 * scale, 80 * scaleY);
-            ctx.fillRect(cityX + 105 * scale, cityY + 10 * scaleY, 20 * scale, 60 * scaleY);
-
-            // Tree
-            const treeX = canvas.width * 0.23;
-            const treeY = horizonY;
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(treeX, treeY, 15 * scale, 100 * scaleY);
-            ctx.fillStyle = '#228B22';
-            ctx.beginPath();
-            ctx.arc(treeX + 7 * scale, treeY - 20 * scaleY, 40 * scale, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(treeX - 10 * scale, treeY, 30 * scale, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(treeX + 25 * scale, treeY - 5 * scaleY, 32 * scale, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Ground
-            ctx.fillStyle = '#32CD32';
-            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-
-            // Grass texture
-            ctx.strokeStyle = '#228B22';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += 15 * scale) {
-                ctx.beginPath();
-                ctx.moveTo(i, groundY);
-                ctx.lineTo(i + 3 * scale, groundY - 5 * scaleY);
-                ctx.moveTo(i + 7 * scale, groundY);
-                ctx.lineTo(i + 10 * scale, groundY - 7 * scaleY);
-                ctx.stroke();
-            }
-
-            // Level indicator
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            ctx.font = `bold ${60 * scale}px Comic Sans MS`;
-            ctx.textAlign = 'center';
-            ctx.fillText('LEVEL ' + level, canvas.width/2, horizonY - 20 * scaleY);
-        }
-
-        // Draw platforms (already in screen coords)
-        function drawPlatform(p) {
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(p.x, p.y + 10 * scaleY, p.width, p.height - 10 * scaleY);
-
-            ctx.fillStyle = '#32CD32';
-            ctx.fillRect(p.x, p.y, p.width, 15 * scaleY);
-
-            ctx.strokeStyle = '#228B22';
-            ctx.lineWidth = 1;
-            for (let i = p.x; i < p.x + p.width; i += 10 * scale) {
-                ctx.beginPath();
-                ctx.moveTo(i + 2 * scale, p.y);
-                ctx.lineTo(i + 4 * scale, p.y - 5 * scaleY);
-                ctx.stroke();
-            }
-
-            ctx.strokeStyle = '#5D2E0C';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(p.x, p.y, p.width, p.height);
-        }
-
-        // Generate level (all positions as fractions 0-1, converted to screen coords)
-        function generateLevel(levelNum) {
-            platforms = [];
-            grapes = [];
-            grapesCollected = 0;
-
-            const groundY = canvas.height * 0.86;
-
-            // Ground platform
-            platforms.push({x: 0, y: groundY, width: canvas.width, height: canvas.height - groundY});
-
-            // Level configs use fractions (0-1) for positions
-            const configs = {
-                1: {
-                    platforms: [
-                        {x: 0.10, y: 0.70, w: 0.125},
-                        {x: 0.31, y: 0.56, w: 0.125},
-                        {x: 0.52, y: 0.70, w: 0.125}
-                    ],
-                    grapes: [{x: 0.16, y: 0.64}, {x: 0.37, y: 0.50}, {x: 0.59, y: 0.64}, {x: 0.25, y: 0.80}]
-                },
-                2: {
-                    platforms: [
-                        {x: 0.06, y: 0.72, w: 0.125},
-                        {x: 0.27, y: 0.58, w: 0.125},
-                        {x: 0.49, y: 0.44, w: 0.125}
-                    ],
-                    grapes: [{x: 0.12, y: 0.66}, {x: 0.34, y: 0.52}, {x: 0.55, y: 0.38}, {x: 0.37, y: 0.80}, {x: 0.62, y: 0.80}]
-                },
-                3: {
-                    platforms: [
-                        {x: 0.04, y: 0.74, w: 0.11},
-                        {x: 0.22, y: 0.60, w: 0.11},
-                        {x: 0.41, y: 0.46, w: 0.11},
-                        {x: 0.60, y: 0.60, w: 0.11}
-                    ],
-                    grapes: [{x: 0.09, y: 0.68}, {x: 0.28, y: 0.54}, {x: 0.47, y: 0.40}, {x: 0.66, y: 0.54}, {x: 0.19, y: 0.80}, {x: 0.50, y: 0.80}]
-                },
-                4: {
-                    platforms: [
-                        {x: 0.025, y: 0.74, w: 0.10},
-                        {x: 0.19, y: 0.60, w: 0.10},
-                        {x: 0.35, y: 0.46, w: 0.10},
-                        {x: 0.51, y: 0.32, w: 0.10}
-                    ],
-                    grapes: [{x: 0.07, y: 0.68}, {x: 0.24, y: 0.54}, {x: 0.40, y: 0.40}, {x: 0.56, y: 0.26}, {x: 0.31, y: 0.80}, {x: 0.62, y: 0.80}]
-                },
-                5: {
-                    platforms: [
-                        {x: 0.04, y: 0.76, w: 0.10},
-                        {x: 0.20, y: 0.62, w: 0.10},
-                        {x: 0.36, y: 0.48, w: 0.10},
-                        {x: 0.52, y: 0.34, w: 0.10},
-                        {x: 0.36, y: 0.20, w: 0.10}
-                    ],
-                    grapes: [{x: 0.09, y: 0.70}, {x: 0.25, y: 0.56}, {x: 0.41, y: 0.42}, {x: 0.57, y: 0.28}, {x: 0.41, y: 0.14}, {x: 0.19, y: 0.80}, {x: 0.56, y: 0.80}]
-                }
-            };
-
-            const config = configs[levelNum] || configs[5];
-            const platHeight = 20 * scaleY;
-
-            config.platforms.forEach(p => {
-                platforms.push({
-                    x: p.x * canvas.width,
-                    y: p.y * canvas.height,
-                    width: p.w * canvas.width,
-                    height: platHeight
-                });
-            });
-
-            config.grapes.forEach(g => {
-                grapes.push({
-                    x: g.x * canvas.width,
-                    y: g.y * canvas.height,
-                    size: 12,
-                    collected: false
-                });
-            });
-
-            totalGrapes = grapes.length;
-            duck.x = canvas.width * 0.06;
-            duck.y = groundY - duck.height - 10;
-            duck.vx = 0;
-            duck.vy = 0;
-
-            // Update gravity based on screen height
-            gravity = 0.6 * scaleY;
-        }
-
-        function checkPlatformCollision() {
-            duck.onGround = false;
-
-            for (const p of platforms) {
-                if (duck.x + duck.width > p.x &&
-                    duck.x < p.x + p.width &&
-                    duck.y + duck.height > p.y &&
-                    duck.y + duck.height < p.y + p.height + duck.vy + 5 &&
-                    duck.vy >= 0) {
-
-                    duck.y = p.y - duck.height;
-                    duck.vy = 0;
-                    duck.onGround = true;
-                }
-            }
-        }
-
-        function checkGrapeCollection() {
-            for (const grape of grapes) {
-                if (!grape.collected) {
-                    const dx = (duck.x + duck.width/2) - grape.x;
-                    const dy = (duck.y + duck.height/2) - grape.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-
-                    if (dist < 40 * scale) {
-                        grape.collected = true;
-                        grapesCollected++;
-                        totalGrapesCollected++;
-                        showMessage("Got a grape!");
-
-                        if (grapesCollected === totalGrapes) {
-                            if (level >= MAX_LEVEL) {
-                                showMessage("You Win! Got ALL the grapes!");
-                                setTimeout(() => {
-                                    gameRunning = false;
-                                    document.getElementById('totalGrapes').textContent = totalGrapesCollected;
-                                    winScreen.classList.remove('hidden');
-                                }, 1500);
-                            } else {
-                                showMessage("Level Complete!");
-                                setTimeout(() => {
-                                    level++;
-                                    generateLevel(level);
-                                }, 1500);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        function showMessage(msg) {
-            gameMessage = msg;
-            messageTimer = 90;
-        }
-
-        // Demo AI - finds nearest uncollected grape and moves toward it
-        function updateDemoAI() {
-            if (!demoMode) return;
-
-            // Find nearest uncollected grape
-            let nearestDist = Infinity;
-            targetGrape = null;
-            for (const grape of grapes) {
-                if (!grape.collected) {
-                    const dx = grape.x - (duck.x + duck.width/2);
-                    const dy = grape.y - (duck.y + duck.height/2);
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist < nearestDist) {
-                        nearestDist = dist;
-                        targetGrape = grape;
-                    }
-                }
-            }
-
-            if (!targetGrape) {
-                // All grapes collected, reset level for demo
-                generateLevel(level);
-                return;
-            }
-
-            // Move toward target grape
-            const dx = targetGrape.x - (duck.x + duck.width/2);
-            const threshold = 20 * scaleX;
-
-            if (dx > threshold) {
-                duck.vx = duck.speed * 0.8;
-                duck.facing = 1;
-            } else if (dx < -threshold) {
-                duck.vx = -duck.speed * 0.8;
-                duck.facing = -1;
-            } else {
-                duck.vx *= friction;
-            }
-
-            // Jump logic
-            demoJumpCooldown--;
-            const needsToJumpUp = targetGrape.y < duck.y - 30 * scaleY;
-
-            // Check if there's a platform above we need to reach
-            let platformAbove = false;
-            for (const p of platforms) {
-                if (p.y < duck.y && p.y > duck.y - 150 * scaleY &&
-                    duck.x + duck.width > p.x - 50 * scaleX && duck.x < p.x + p.width + 50 * scaleX) {
-                    platformAbove = true;
-                    break;
-                }
-            }
-
-            if (duck.onGround && demoJumpCooldown <= 0 && (needsToJumpUp || platformAbove)) {
-                duck.vy = duck.jumpForce;
-                duck.onGround = false;
-                demoJumpCooldown = 30;
-            }
-        }
-
-        function update() {
-            // Run demo mode even when game not started
-            if (demoMode && !gameRunning) {
-                updateDemoAI();
-            }
-
-            // Player input only when game is running (not demo)
-            if (gameRunning && !demoMode) {
-                if (keys['ArrowLeft'] || keys['KeyA'] || keys['tiltLeft'] || keys['touchLeft']) {
-                    duck.vx = -duck.speed * (keys['tiltLeft'] ? duck.tiltAmount : 1);
-                    duck.facing = -1;
-                } else if (keys['ArrowRight'] || keys['KeyD'] || keys['tiltRight'] || keys['touchRight']) {
-                    duck.vx = duck.speed * (keys['tiltRight'] ? duck.tiltAmount : 1);
-                    duck.facing = 1;
-                } else {
-                    duck.vx *= friction;
-                }
-
-                if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['touchJump']) && duck.onGround) {
-                    duck.vy = duck.jumpForce;
-                    duck.onGround = false;
-                    keys['touchJump'] = false; // Reset tap jump
-                }
-            }
-
-            duck.vy += gravity;
-            duck.x += duck.vx;
-            duck.y += duck.vy;
-
-            // Boundaries
-            if (duck.x < 0) duck.x = 0;
-            if (duck.x + duck.width > canvas.width) duck.x = canvas.width - duck.width;
-
-            // Fall off screen
-            if (duck.y > canvas.height + 50) {
-                const groundY = canvas.height * 0.86;
-                duck.x = canvas.width * 0.06;
-                duck.y = groundY - duck.height - 10;
-                duck.vy = 0;
-                if (gameRunning) showMessage("Whoops! Try again!");
-            }
-
-            // Walk animation
-            if (Math.abs(duck.vx) > 0.5) {
-                duck.walkTimer++;
-                if (duck.walkTimer > 5) {
-                    duck.walkFrame++;
-                    duck.walkTimer = 0;
-                }
-            } else {
-                duck.walkFrame = 0;
-            }
-
-            checkPlatformCollision();
-
-            // Only collect grapes and update UI when game is running
-            if (gameRunning) {
-                checkGrapeCollection();
-                grapeCountEl.textContent = grapesCollected + '/' + totalGrapes;
-                levelNumEl.textContent = level;
-            } else if (demoMode) {
-                // Demo mode grape collection (just for show, resets)
-                for (const grape of grapes) {
-                    if (!grape.collected) {
-                        const dx = (duck.x + duck.width/2) - grape.x;
-                        const dy = (duck.y + duck.height/2) - grape.y;
-                        const dist = Math.sqrt(dx*dx + dy*dy);
-                        if (dist < 40 * scale) {
-                            grape.collected = true;
-                        }
-                    }
-                }
-            }
-
-            if (messageTimer > 0) messageTimer--;
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            drawBackground();
-
-            const groundY = canvas.height * 0.86;
-
-            // Platforms (skip ground)
-            for (const p of platforms) {
-                if (p.y < groundY) drawPlatform(p);
-            }
-
-            // Lemonade stand
-            drawLemonadeStand();
-
-            // Grapes
-            for (const grape of grapes) {
-                if (!grape.collected) drawGrape(grape.x, grape.y, grape.size);
-            }
-
-            // Duck
-            drawDuck(duck.x, duck.y, duck.facing, duck.walkFrame);
-
-            // Speech bubble when near stand (right side of screen, lower area)
-            const standX = canvas.width * 0.75;
-            if (duck.x > standX - 100 * scale && duck.x < standX + 100 * scale && duck.y > canvas.height * 0.7) {
-                const bubbleX = standX + 40 * scale;
-                const bubbleY = canvas.height * 0.5;
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.ellipse(bubbleX, bubbleY, 70 * scale, 30 * scale, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.moveTo(bubbleX - 20 * scale, bubbleY + 25 * scale);
-                ctx.lineTo(bubbleX - 10 * scale, bubbleY + 40 * scale);
-                ctx.lineTo(bubbleX, bubbleY + 25 * scale);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.fillStyle = '#000';
-                ctx.font = `bold ${12 * scale}px Comic Sans MS`;
-                ctx.textAlign = 'center';
-                ctx.fillText("We only sell", bubbleX, bubbleY - 5 * scale);
-                ctx.fillText("LEMONADE!", bubbleX, bubbleY + 10 * scale);
-            }
-
-            // Message
-            if (messageTimer > 0) {
-                const msgW = 400 * scaleX;
-                const msgH = 50 * scaleY;
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect((canvas.width - msgW) / 2, 20 * scaleY, msgW, msgH);
-                ctx.fillStyle = '#FFD700';
-                ctx.font = `bold ${24 * scale}px Comic Sans MS`;
-                ctx.textAlign = 'center';
-                ctx.fillText(gameMessage, canvas.width / 2, 20 * scaleY + msgH * 0.65);
-            }
         }
 
         function gameLoop() {
