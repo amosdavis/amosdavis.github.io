@@ -266,40 +266,34 @@
         const camera = { x: 0, y: 0 };
         let sceneryElements = [];  // Background objects
 
-        // Scene definitions with distinct visuals
-        const SCENES = {
-            COUNTRYSIDE: {
-                name: 'countryside',
-                skyColors: ['#87CEEB', '#B0E0E6'],
-                hillColor: '#3CB371',
-                groundColor: '#32CD32',
-                groundAccent: '#228B22',
-                horizonY: 0.6
-            },
-            SUBURBS: {
-                name: 'suburbs',
-                skyColors: ['#87CEEB', '#A8C8E8'],
-                hillColor: '#5D8C5D',
-                groundColor: '#808080',  // Sidewalk
-                groundAccent: '#606060',
-                horizonY: 0.55
-            },
-            DOWNTOWN: {
-                name: 'downtown',
-                skyColors: ['#6B8CAE', '#8899AA'],
-                hillColor: '#4A4A4A',
-                groundColor: '#505050',  // Street
-                groundAccent: '#404040',
-                horizonY: 0.5
-            }
-        };
+        // SVG Background system - 20 scenes loaded from files
+        const backgroundImages = [];
+        const TOTAL_BG_SCENES = 20;
+        let backgroundsLoaded = false;
 
-        // Get scene based on world X position
-        function getCurrentScene(worldX) {
-            const segment = worldWidth / 3;
-            if (worldX < segment) return SCENES.COUNTRYSIDE;
-            if (worldX < segment * 2) return SCENES.SUBURBS;
-            return SCENES.DOWNTOWN;
+        // Load all background SVGs
+        function loadBackgrounds() {
+            let loaded = 0;
+            for (let i = 1; i <= TOTAL_BG_SCENES; i++) {
+                const img = new Image();
+                const num = i.toString().padStart(2, '0');
+                img.src = `backgrounds/scene${num}.svg`;
+                img.onload = () => {
+                    loaded++;
+                    if (loaded === TOTAL_BG_SCENES) {
+                        backgroundsLoaded = true;
+                    }
+                };
+                backgroundImages.push(img);
+            }
+        }
+
+        // Get background image for a given world X position
+        function getBackgroundForPosition(worldX) {
+            // Cycle through backgrounds based on position
+            const bgWidth = 1900 * scale; // Each SVG is 1900px wide
+            const bgIndex = Math.floor((worldX / bgWidth) % TOTAL_BG_SCENES);
+            return backgroundImages[bgIndex] || backgroundImages[0];
         }
 
         // Convert world coords to screen coords
@@ -629,19 +623,6 @@
             ctx.fillText('FINISH', x + 25 * s, y - 70 * s);
         }
 
-        // Draw a cloud
-        function drawCloud(x, y, size) {
-            const s = size * scale;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.beginPath();
-            ctx.arc(x, y, 20 * s, 0, Math.PI * 2);
-            ctx.arc(x + 25 * s, y - 5 * s, 25 * s, 0, Math.PI * 2);
-            ctx.arc(x + 50 * s, y, 20 * s, 0, Math.PI * 2);
-            ctx.arc(x + 15 * s, y + 10 * s, 15 * s, 0, Math.PI * 2);
-            ctx.arc(x + 35 * s, y + 8 * s, 18 * s, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
         // Draw scenery element based on type
         function drawSceneryElement(elem, screenX) {
             const groundY = canvas.height * 0.86;
@@ -686,168 +667,70 @@
         }
 
         // ========================================
-        // PARALLAX BACKGROUND DRAWING
+        // SVG BACKGROUND DRAWING
         // ========================================
 
-        // Draw sky layer with parallax
-        function drawSkyLayer(parallaxOffset) {
-            const scene = getCurrentScene(camera.x + canvas.width / 2);
-            const horizonY = canvas.height * scene.horizonY;
+        // Draw SVG backgrounds with parallax scrolling
+        function drawSVGBackgrounds() {
+            const groundY = canvas.height * 0.86;  // Match game's ground level
 
-            // Sky gradient
-            const skyGradient = ctx.createLinearGradient(0, 0, 0, horizonY);
-            skyGradient.addColorStop(0, scene.skyColors[0]);
-            skyGradient.addColorStop(1, scene.skyColors[1]);
-            ctx.fillStyle = skyGradient;
-            ctx.fillRect(0, 0, canvas.width, horizonY);
+            if (!backgroundsLoaded || backgroundImages.length === 0) {
+                // Fallback: simple gradient while loading
+                const gradient = ctx.createLinearGradient(0, 0, 0, groundY);
+                gradient.addColorStop(0, '#87CEEB');
+                gradient.addColorStop(0.7, '#B0E0E6');
+                gradient.addColorStop(1, '#90EE90');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, groundY);
 
-            // Sun (moves slowly with parallax)
-            const sunX = canvas.width * 0.85 - parallaxOffset * 0.3;
-            const sunY = canvas.height * 0.12;
-            const sunR = 35 * scale;
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
-            ctx.fill();
-
-            for (let i = 0; i < 8; i++) {
-                const angle = (i / 8) * Math.PI * 2;
-                ctx.strokeStyle = '#FFD700';
-                ctx.lineWidth = 3 * scale;
-                ctx.beginPath();
-                ctx.moveTo(sunX + Math.cos(angle) * sunR * 1.15, sunY + Math.sin(angle) * sunR * 1.15);
-                ctx.lineTo(sunX + Math.cos(angle) * sunR * 1.6, sunY + Math.sin(angle) * sunR * 1.6);
-                ctx.stroke();
+                // Ground
+                ctx.fillStyle = '#32CD32';
+                ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+                return;
             }
 
-            // Clouds (very slow parallax)
-            const cloudOffset = parallaxOffset * 0.05;
-            drawCloud(100 - cloudOffset % 400, 60 * scaleY, 0.8);
-            drawCloud(350 - cloudOffset % 400, 40 * scaleY, 1);
-            drawCloud(600 - cloudOffset % 400, 70 * scaleY, 0.6);
-        }
+            // SVG dimensions
+            const svgWidth = 1900;
+            const svgHeight = 300;
 
-        // Draw far background layer (distant hills/buildings)
-        function drawFarLayer(parallaxOffset) {
-            const scene = getCurrentScene(camera.x + canvas.width / 2);
-            const horizonY = canvas.height * scene.horizonY;
-            const groundY = canvas.height * 0.86;
+            // Scale SVG to fit from top of screen to ground level
+            // The SVG's hills (bottom ~30%) should sit at the ground line
+            const bgHeight = groundY;
+            const bgScale = bgHeight / svgHeight;
+            const scaledWidth = svgWidth * bgScale;
 
-            if (scene.name === 'downtown') {
-                // City skyline silhouette
-                ctx.fillStyle = '#3A3A3A';
-                const buildingData = [
-                    {x: 0, w: 80, h: 120},
-                    {x: 100, w: 60, h: 80},
-                    {x: 180, w: 100, h: 150},
-                    {x: 300, w: 70, h: 100},
-                    {x: 400, w: 90, h: 130},
-                    {x: 520, w: 60, h: 90},
-                    {x: 600, w: 110, h: 160},
-                    {x: 740, w: 80, h: 110}
-                ];
-                for (const b of buildingData) {
-                    const bx = ((b.x - parallaxOffset * 0.5) % 900 + 900) % 900;
-                    ctx.fillRect(bx * scaleX, horizonY - b.h * scaleY * 0.5, b.w * scaleX, b.h * scaleY * 0.5);
-                }
-            } else {
-                // Rolling hills
-                ctx.fillStyle = scene.hillColor;
-                ctx.beginPath();
-                ctx.moveTo(0, horizonY);
+            // Calculate parallax offset (slower than camera for depth effect)
+            const parallaxFactor = 0.4;
+            const offset = camera.x * parallaxFactor;
 
-                const hillCount = 4;
-                for (let i = 0; i <= hillCount; i++) {
-                    const hx = (i / hillCount) * canvas.width;
-                    const offset = ((parallaxOffset * 0.3) + i * 200) % 400;
-                    const hillHeight = 50 + Math.sin(offset * 0.02) * 30;
-                    ctx.quadraticCurveTo(
-                        hx + canvas.width / (hillCount * 2),
-                        horizonY - hillHeight * scaleY,
-                        hx + canvas.width / hillCount,
-                        horizonY
-                    );
-                }
-                ctx.lineTo(canvas.width, groundY);
-                ctx.lineTo(0, groundY);
-                ctx.closePath();
-                ctx.fill();
-            }
-        }
+            // Determine which backgrounds to draw (tile them)
+            const startBgIndex = Math.floor(offset / scaledWidth);
+            const offsetInBg = offset % scaledWidth;
 
-        // Draw mid layer (trees, houses in distance)
-        function drawMidLayer(parallaxOffset) {
-            const scene = getCurrentScene(camera.x + canvas.width / 2);
-            const horizonY = canvas.height * scene.horizonY;
+            // Draw enough backgrounds to cover the screen
+            for (let i = -1; i <= Math.ceil(canvas.width / scaledWidth) + 1; i++) {
+                const bgIndex = ((startBgIndex + i) % TOTAL_BG_SCENES + TOTAL_BG_SCENES) % TOTAL_BG_SCENES;
+                const x = i * scaledWidth - offsetInBg;
 
-            if (scene.name === 'countryside') {
-                // Distant trees
-                ctx.fillStyle = '#2E7D32';
-                for (let i = 0; i < 8; i++) {
-                    const tx = ((i * 150 - parallaxOffset * 0.4) % 1200 + 1200) % 1200;
-                    ctx.beginPath();
-                    ctx.arc(tx, horizonY + 20 * scaleY, 30 * scale, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            } else if (scene.name === 'suburbs') {
-                // Distant houses
-                ctx.fillStyle = '#8B7355';
-                for (let i = 0; i < 6; i++) {
-                    const hx = ((i * 180 - parallaxOffset * 0.4) % 1100 + 1100) % 1100;
-                    ctx.fillRect(hx, horizonY - 20 * scaleY, 40 * scaleX, 30 * scaleY);
-                    // Small roof
-                    ctx.beginPath();
-                    ctx.moveTo(hx - 5 * scaleX, horizonY - 20 * scaleY);
-                    ctx.lineTo(hx + 20 * scaleX, horizonY - 40 * scaleY);
-                    ctx.lineTo(hx + 45 * scaleX, horizonY - 20 * scaleY);
-                    ctx.closePath();
-                    ctx.fill();
+                if (backgroundImages[bgIndex]) {
+                    ctx.drawImage(backgroundImages[bgIndex], x, 0, scaledWidth, bgHeight);
                 }
             }
-        }
 
-        // Draw ground layer
-        function drawGroundLayer() {
-            const groundY = canvas.height * 0.86;
-            const scene = getCurrentScene(camera.x + canvas.width / 2);
-
-            // Ground fill
-            ctx.fillStyle = scene.groundColor;
+            // Draw ground below the SVG backgrounds (the playable ground area)
+            ctx.fillStyle = '#32CD32';  // Bright green grass
             ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
 
-            // Ground texture
-            ctx.strokeStyle = scene.groundAccent;
+            // Ground texture - grass blades
+            ctx.strokeStyle = '#228B22';
             ctx.lineWidth = 1;
-
-            if (scene.name === 'countryside') {
-                // Grass blades
-                for (let i = 0; i < canvas.width; i += 15 * scale) {
-                    ctx.beginPath();
-                    ctx.moveTo(i, groundY);
-                    ctx.lineTo(i + 3 * scale, groundY - 5 * scaleY);
-                    ctx.moveTo(i + 7 * scale, groundY);
-                    ctx.lineTo(i + 10 * scale, groundY - 7 * scaleY);
-                    ctx.stroke();
-                }
-            } else if (scene.name === 'suburbs') {
-                // Sidewalk lines
-                ctx.strokeStyle = '#999';
-                for (let i = -camera.x % (60 * scale); i < canvas.width; i += 60 * scale) {
-                    ctx.beginPath();
-                    ctx.moveTo(i, groundY);
-                    ctx.lineTo(i, canvas.height);
-                    ctx.stroke();
-                }
-            } else {
-                // Street markings
-                ctx.strokeStyle = '#FFFF00';
-                ctx.lineWidth = 3 * scale;
-                ctx.setLineDash([30 * scale, 20 * scale]);
+            for (let i = 0; i < canvas.width; i += 15 * scale) {
                 ctx.beginPath();
-                ctx.moveTo(0, groundY + 30 * scaleY);
-                ctx.lineTo(canvas.width, groundY + 30 * scaleY);
+                ctx.moveTo(i, groundY);
+                ctx.lineTo(i + 3 * scale, groundY - 5 * scaleY);
+                ctx.moveTo(i + 7 * scale, groundY);
+                ctx.lineTo(i + 10 * scale, groundY - 7 * scaleY);
                 ctx.stroke();
-                ctx.setLineDash([]);
             }
         }
 
@@ -1366,11 +1249,8 @@
 
             const groundY = canvas.height * 0.86;
 
-            // Draw parallax background layers
-            drawSkyLayer(camera.x * 0.1);
-            drawFarLayer(camera.x * 0.3);
-            drawMidLayer(camera.x * 0.6);
-            drawGroundLayer();
+            // Draw SVG backgrounds
+            drawSVGBackgrounds();
 
             // Level indicator (fixed on screen)
             ctx.fillStyle = 'rgba(0,0,0,0.15)';
@@ -1762,6 +1642,7 @@
         });
 
         // Initialize
+        loadBackgrounds();
         resizeCanvas();
         generateLevel(1);
         gameLoop();
