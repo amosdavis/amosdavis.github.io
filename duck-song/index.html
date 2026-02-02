@@ -404,11 +404,12 @@
             });
         }
 
-        // Draw lemonade stand (scaled) - positioned relative to screen
+        // Draw lemonade stand (scaled) - positioned on the ground
         function drawLemonadeStand() {
-            const x = canvas.width * 0.75 - 60 * scale;
-            const y = canvas.height - sy(220);
+            const groundY = canvas.height * 0.86;
             const s = scale;
+            const x = canvas.width * 0.75 - 60 * s;
+            const y = groundY - 150 * s; // Stand base is 150*s tall (70 + 80)
 
             // Stand base
             ctx.fillStyle = '#8B4513';
