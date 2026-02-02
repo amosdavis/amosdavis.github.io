@@ -692,18 +692,8 @@
             const levelBg = getBackgroundForLevel(level);
             if (!levelBg) return;
 
-            // Scale background to cover the full screen width with some extra for parallax
-            const bgHeight = groundY;
-            const bgWidth = canvas.width * 1.3;  // Slightly wider for parallax movement
-
-            // Calculate parallax offset (subtle shift as camera moves)
-            const parallaxFactor = 0.1;
-            const maxOffset = bgWidth - canvas.width;
-            const progress = camera.x / (worldWidth - canvas.width);  // 0 to 1 progress through level
-            const offsetX = -progress * maxOffset * parallaxFactor;
-
-            // Draw single background stretched to cover screen
-            ctx.drawImage(levelBg, offsetX, 0, bgWidth, bgHeight);
+            // Draw background filling the screen (static, no movement)
+            ctx.drawImage(levelBg, 0, 0, canvas.width, groundY);
 
             // Draw ground below the SVG backgrounds (the playable ground area)
             ctx.fillStyle = '#32CD32';  // Bright green grass
