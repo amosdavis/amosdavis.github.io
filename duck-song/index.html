@@ -785,67 +785,133 @@
             ctx.scale(facing * scale, scale);
             ctx.translate(-25, -30); // center on reference duck size
 
-            // Body (yellow oval)
-            ctx.fillStyle = '#FFB830';
+            // Tail feathers
+            ctx.fillStyle = '#E8A820';
             ctx.beginPath();
-            ctx.ellipse(25, 35, 22, 28, 0, 0, Math.PI * 2);
+            ctx.moveTo(-5, 35);
+            ctx.quadraticCurveTo(-15, 25, -12, 38);
+            ctx.quadraticCurveTo(-18, 30, -14, 42);
+            ctx.quadraticCurveTo(-12, 45, -5, 42);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Body (yellow oval)
+            ctx.fillStyle = '#FFD83D';
+            ctx.beginPath();
+            ctx.ellipse(25, 38, 24, 26, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Head
-            ctx.fillStyle = '#FFB830';
+            // Wing
+            ctx.fillStyle = '#E8C830';
             ctx.beginPath();
-            ctx.arc(30, 12, 16, 0, Math.PI * 2);
+            ctx.ellipse(20, 40, 14, 18, -0.2, 0, Math.PI * 2);
             ctx.fill();
+            ctx.strokeStyle = '#D4A820';
+            ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Beak (orange)
-            ctx.fillStyle = '#FF6B35';
+            // Neck
+            ctx.fillStyle = '#FFD83D';
             ctx.beginPath();
-            ctx.moveTo(44, 10);
-            ctx.lineTo(60, 14);
-            ctx.lineTo(44, 18);
+            ctx.moveTo(35, 20);
+            ctx.quadraticCurveTo(42, 25, 40, 35);
+            ctx.quadraticCurveTo(35, 30, 30, 22);
             ctx.closePath();
             ctx.fill();
+
+            // Head
+            ctx.fillStyle = '#FFD83D';
+            ctx.beginPath();
+            ctx.arc(32, 10, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
             ctx.stroke();
+
+            // Beak (flat duck bill)
+            ctx.fillStyle = '#FF8C00';
+            ctx.beginPath();
+            ctx.moveTo(44, 8);
+            ctx.quadraticCurveTo(58, 6, 60, 12);
+            ctx.quadraticCurveTo(58, 18, 44, 16);
+            ctx.quadraticCurveTo(46, 12, 44, 8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            // Nostril
+            ctx.fillStyle = '#CC6600';
+            ctx.beginPath();
+            ctx.ellipse(50, 11, 2, 1.5, 0, 0, Math.PI * 2);
+            ctx.fill();
 
             // Eye (white with black pupil)
             ctx.fillStyle = 'white';
             ctx.beginPath();
-            ctx.ellipse(36, 8, 6, 7, 0, 0, Math.PI * 2);
+            ctx.ellipse(38, 7, 5, 6, 0, 0, Math.PI * 2);
             ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
             ctx.stroke();
 
             // Pupil
             ctx.fillStyle = 'black';
             ctx.beginPath();
-            ctx.arc(38, 8, 3, 0, Math.PI * 2);
+            ctx.arc(39, 7, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            // Eye highlight
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(40, 5.5, 1, 0, Math.PI * 2);
             ctx.fill();
 
             // Legs
-            ctx.strokeStyle = '#FF6B35';
+            ctx.strokeStyle = '#FF8C00';
             ctx.lineWidth = 3;
             const legOffset = Math.sin(walkFrame * 0.3) * 5;
 
             ctx.beginPath();
-            ctx.moveTo(18, 58);
-            ctx.lineTo(15 - legOffset, 70);
+            ctx.moveTo(18, 60);
+            ctx.lineTo(15 - legOffset, 72);
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.moveTo(32, 58);
-            ctx.lineTo(35 + legOffset, 70);
+            ctx.moveTo(32, 60);
+            ctx.lineTo(35 + legOffset, 72);
             ctx.stroke();
 
-            // Feet
-            ctx.lineWidth = 2;
+            // Webbed feet
+            ctx.fillStyle = '#FF8C00';
+            // Left foot
             ctx.beginPath();
-            ctx.moveTo(10 - legOffset, 70);
-            ctx.lineTo(20 - legOffset, 70);
-            ctx.moveTo(30 + legOffset, 70);
-            ctx.lineTo(40 + legOffset, 70);
+            ctx.moveTo(15 - legOffset, 72);
+            ctx.lineTo(5 - legOffset, 74);
+            ctx.lineTo(10 - legOffset, 72);
+            ctx.lineTo(15 - legOffset, 74);
+            ctx.lineTo(20 - legOffset, 72);
+            ctx.lineTo(25 - legOffset, 74);
+            ctx.lineTo(20 - legOffset, 72);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            // Right foot
+            ctx.beginPath();
+            ctx.moveTo(35 + legOffset, 72);
+            ctx.lineTo(25 + legOffset, 74);
+            ctx.lineTo(30 + legOffset, 72);
+            ctx.lineTo(35 + legOffset, 74);
+            ctx.lineTo(40 + legOffset, 72);
+            ctx.lineTo(45 + legOffset, 74);
+            ctx.lineTo(40 + legOffset, 72);
+            ctx.closePath();
+            ctx.fill();
             ctx.stroke();
 
             ctx.restore();
@@ -1462,74 +1528,161 @@
             ctx.fillRect(x - 5*s, y + 65*s, 130*s, 10*s);
 
             // Sign board
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(x + 10*s, y - 30*s, 100*s, 40*s);
-            ctx.strokeRect(x + 10*s, y - 30*s, 100*s, 40*s);
+            ctx.fillStyle = '#FFFACD';
+            ctx.fillRect(x + 10*s, y - 35*s, 100*s, 45*s);
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x + 10*s, y - 35*s, 100*s, 45*s);
 
             // Sign text
-            ctx.fillStyle = '#FFD700';
-            ctx.font = `bold ${12*s}px Comic Sans MS`;
+            ctx.fillStyle = '#228B22';
+            ctx.font = `bold ${11*s}px Comic Sans MS`;
             ctx.textAlign = 'center';
-            ctx.fillText('ICE FRESH', x + 60*s, y - 12*s);
-
+            ctx.fillText('FRESH', x + 60*s, y - 18*s);
             ctx.fillStyle = '#FFD700';
             ctx.font = `bold ${14*s}px Comic Sans MS`;
-            ctx.fillText('Lemonade', x + 60*s, y + 90*s);
+            ctx.fillText('LEMONADE', x + 60*s, y - 2*s);
+            ctx.fillStyle = '#228B22';
+            ctx.font = `bold ${9*s}px Comic Sans MS`;
+            ctx.fillText('25¢', x + 60*s, y + 8*s);
 
             // Roof poles
             ctx.strokeStyle = '#8B4513';
             ctx.lineWidth = 5*s;
             ctx.beginPath();
-            ctx.moveTo(x + 20*s, y - 30*s);
+            ctx.moveTo(x + 20*s, y - 35*s);
             ctx.lineTo(x + 20*s, y + 70*s);
-            ctx.moveTo(x + 100*s, y - 30*s);
+            ctx.moveTo(x + 100*s, y - 35*s);
             ctx.lineTo(x + 100*s, y + 70*s);
             ctx.stroke();
 
-            // Lemonade pitcher
-            ctx.fillStyle = '#FFFF99';
+            // Pile of lemons on the left side of counter
+            function drawLemon(lx, ly, size, rotation) {
+                ctx.save();
+                ctx.translate(lx, ly);
+                ctx.rotate(rotation);
+                ctx.fillStyle = '#FFE135';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, size * 8 * s, size * 5 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#DAA520';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // Lemon tip
+                ctx.fillStyle = '#CCBF00';
+                ctx.beginPath();
+                ctx.ellipse(size * 7 * s, 0, size * 2 * s, size * 2 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            // Bottom layer
+            drawLemon(x + 25*s, y + 58*s, 1, 0.2);
+            drawLemon(x + 40*s, y + 60*s, 0.9, -0.3);
+            drawLemon(x + 18*s, y + 62*s, 0.85, 0.5);
+            // Top layer
+            drawLemon(x + 30*s, y + 52*s, 0.8, -0.1);
+            drawLemon(x + 22*s, y + 54*s, 0.75, 0.4);
+
+            // Glass pitcher with lemonade
+            // Pitcher body (glass)
+            ctx.fillStyle = 'rgba(255, 255, 200, 0.9)';
             ctx.beginPath();
-            ctx.ellipse(x + 45*s, y + 55*s, 12*s, 15*s, 0, 0, Math.PI * 2);
+            ctx.moveTo(x + 70*s, y + 35*s);
+            ctx.lineTo(x + 65*s, y + 65*s);
+            ctx.lineTo(x + 95*s, y + 65*s);
+            ctx.lineTo(x + 90*s, y + 35*s);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Lemonade liquid inside
+            ctx.fillStyle = '#FFEB3B';
+            ctx.beginPath();
+            ctx.moveTo(x + 67*s, y + 42*s);
+            ctx.lineTo(x + 65*s, y + 65*s);
+            ctx.lineTo(x + 95*s, y + 65*s);
+            ctx.lineTo(x + 92*s, y + 42*s);
+            ctx.closePath();
+            ctx.fill();
+
+            // Lemon slices floating in pitcher
+            ctx.fillStyle = '#FFE135';
+            ctx.beginPath();
+            ctx.arc(x + 75*s, y + 50*s, 4*s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#DAA520';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x + 85*s, y + 55*s, 3*s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Ice cubes
+            ctx.fillStyle = 'rgba(200, 230, 255, 0.7)';
+            ctx.fillRect(x + 70*s, y + 45*s, 5*s, 5*s);
+            ctx.fillRect(x + 82*s, y + 48*s, 4*s, 4*s);
+            ctx.fillRect(x + 76*s, y + 56*s, 5*s, 5*s);
+
+            // Pitcher handle
+            ctx.strokeStyle = '#87CEEB';
+            ctx.lineWidth = 3*s;
+            ctx.beginPath();
+            ctx.arc(x + 98*s, y + 50*s, 8*s, -Math.PI/2, Math.PI/2);
+            ctx.stroke();
+
+            // Pitcher spout
+            ctx.fillStyle = 'rgba(255, 255, 200, 0.9)';
+            ctx.beginPath();
+            ctx.moveTo(x + 70*s, y + 35*s);
+            ctx.lineTo(x + 62*s, y + 30*s);
+            ctx.lineTo(x + 68*s, y + 35*s);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Lemonade man (behind counter)
+            ctx.fillStyle = '#FDBF6F';
+            ctx.beginPath();
+            ctx.arc(x + 60*s, y + 30*s, 15*s, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            ctx.beginPath();
-            ctx.arc(x + 58*s, y + 55*s, 8*s, -Math.PI/2, Math.PI/2);
-            ctx.stroke();
-
-            // Lemonade man
-            ctx.fillStyle = '#FDBF6F';
-            ctx.beginPath();
-            ctx.arc(x + 75*s, y + 30*s, 15*s, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
+            // Hair
             ctx.fillStyle = '#8B4513';
             ctx.beginPath();
-            ctx.arc(x + 75*s, y + 22*s, 14*s, Math.PI, 2 * Math.PI);
+            ctx.arc(x + 60*s, y + 22*s, 14*s, Math.PI, 2 * Math.PI);
             ctx.fill();
 
+            // Eyes
             ctx.fillStyle = 'white';
             ctx.beginPath();
-            ctx.arc(x + 70*s, y + 28*s, 4*s, 0, Math.PI * 2);
-            ctx.arc(x + 80*s, y + 28*s, 4*s, 0, Math.PI * 2);
+            ctx.arc(x + 55*s, y + 28*s, 4*s, 0, Math.PI * 2);
+            ctx.arc(x + 65*s, y + 28*s, 4*s, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = 'black';
             ctx.beginPath();
-            ctx.arc(x + 70*s, y + 28*s, 2*s, 0, Math.PI * 2);
-            ctx.arc(x + 80*s, y + 28*s, 2*s, 0, Math.PI * 2);
+            ctx.arc(x + 55*s, y + 28*s, 2*s, 0, Math.PI * 2);
+            ctx.arc(x + 65*s, y + 28*s, 2*s, 0, Math.PI * 2);
             ctx.fill();
 
+            // Frown (annoyed expression)
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(x + 75*s, y + 40*s, 5*s, 0.2 * Math.PI, 0.8 * Math.PI);
+            ctx.arc(x + 60*s, y + 42*s, 5*s, 1.2 * Math.PI, 1.8 * Math.PI);
             ctx.stroke();
 
-            ctx.fillStyle = '#4169E1';
-            ctx.fillRect(x + 60*s, y + 45*s, 30*s, 25*s);
+            // Apron
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(x + 48*s, y + 45*s, 24*s, 25*s);
+            ctx.strokeStyle = '#DDD';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + 48*s, y + 45*s, 24*s, 25*s);
         }
 
         function gameLoop() {
