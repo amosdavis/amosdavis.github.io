@@ -1246,16 +1246,16 @@
             ctx.textAlign = 'center';
             ctx.fillText('LEVEL ' + level, canvas.width/2, canvas.height * 0.55);
 
-            // Draw scenery elements (with camera offset, culled for performance)
+            // Draw only lemonade stand and finish banner (skip all other scenery)
             for (const elem of sceneryElements) {
                 const screenX = elem.x - camera.x;
-                // Only draw if on screen (with margin for large elements)
                 if (screenX > -200 * scale && screenX < canvas.width + 200 * scale) {
                     if (elem.type === 'lemonadeStand') {
                         drawLemonadeStandAt(screenX);
-                    } else {
+                    } else if (elem.type === 'finishBanner') {
                         drawSceneryElement(elem, screenX);
                     }
+                    // Skip all other scenery (trees, houses, buildings, etc.)
                 }
             }
 
