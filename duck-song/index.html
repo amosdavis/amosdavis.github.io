@@ -869,11 +869,11 @@
 
             // Level-specific scene themes
             const levelThemes = {
-                1: 'countryside',  // Lemonade stand, trees, hills
-                2: 'suburbs',      // Houses, mailboxes, small trees
-                3: 'mixed',        // Transition - some houses, some buildings
-                4: 'downtown',     // Buildings, lamp posts
-                5: 'mainstreet'    // Full city with everything
+                1: 'countryside',  // Trees, shrubs, flowers, fences
+                2: 'countryside',  // Same pastoral theme
+                3: 'suburbs',      // Houses, mailboxes, small trees
+                4: 'suburbs',      // More suburban
+                5: 'downtown'      // Buildings, lamp posts, city
             };
 
             const theme = levelThemes[levelNum] || 'mainstreet';
@@ -941,19 +941,18 @@
             gravity = 0.6 * scaleY;
         }
 
-        // Generate scenery elements based on theme
+        // Generate scenery elements based on theme (consistent throughout level)
         function generateScenery(theme, levelNum) {
             sceneryElements = [];
             const colors = ['#FF69B4', '#FF6347', '#FFD700', '#9370DB', '#00CED1'];
             const streetNames = ['MAIN ST', 'OAK AVE', 'PARK RD', 'ELM ST', 'GRAPE LN'];
 
             for (let x = 100; x < worldWidth; x += 80 + Math.random() * 120) {
-                const worldPos = x / worldWidth;  // 0-1 position in world
                 const rand = Math.random();
 
-                // Theme-based scenery generation
-                if (theme === 'countryside' || (theme === 'mixed' && worldPos < 0.4)) {
-                    // Countryside elements
+                // Use same theme throughout entire level
+                if (theme === 'countryside') {
+                    // Countryside elements only
                     if (rand < 0.25) {
                         sceneryElements.push({type: 'tree', x: x, size: 0.8 + Math.random() * 0.4});
                     } else if (rand < 0.4) {
@@ -962,13 +961,13 @@
                         sceneryElements.push({type: 'flower', x: x, color: colors[Math.floor(Math.random() * colors.length)]});
                     } else if (rand < 0.55) {
                         sceneryElements.push({type: 'fence', x: x, width: 80 + Math.random() * 40});
-                        x += 60;  // Skip ahead after fence
+                        x += 60;
                     }
-                } else if (theme === 'suburbs' || (theme === 'mixed' && worldPos < 0.7)) {
-                    // Suburban elements
+                } else if (theme === 'suburbs') {
+                    // Suburban elements only
                     if (rand < 0.2) {
                         sceneryElements.push({type: 'house', x: x, style: Math.floor(Math.random() * 4)});
-                        x += 100;  // Skip ahead after house
+                        x += 100;
                     } else if (rand < 0.35) {
                         sceneryElements.push({type: 'tree', x: x, size: 0.6 + Math.random() * 0.3});
                     } else if (rand < 0.45) {
@@ -978,8 +977,8 @@
                     } else if (rand < 0.6) {
                         sceneryElements.push({type: 'lamppost', x: x});
                     }
-                } else {
-                    // Downtown/city elements
+                } else if (theme === 'downtown') {
+                    // Downtown elements only
                     if (rand < 0.3) {
                         sceneryElements.push({
                             type: 'building',
@@ -988,7 +987,7 @@
                             height: 150 + Math.random() * 150,
                             style: Math.floor(Math.random() * 5)
                         });
-                        x += 120;  // Skip ahead after building
+                        x += 120;
                     } else if (rand < 0.45) {
                         sceneryElements.push({type: 'lamppost', x: x});
                     } else if (rand < 0.55) {
@@ -997,6 +996,17 @@
                         sceneryElements.push({type: 'bench', x: x});
                     } else if (rand < 0.7) {
                         sceneryElements.push({type: 'sign', x: x, text: streetNames[Math.floor(Math.random() * streetNames.length)]});
+                    }
+                } else {
+                    // Default/mainstreet - mix of everything
+                    if (rand < 0.15) {
+                        sceneryElements.push({type: 'tree', x: x, size: 0.7 + Math.random() * 0.3});
+                    } else if (rand < 0.25) {
+                        sceneryElements.push({type: 'shrub', x: x, size: 0.6 + Math.random() * 0.4});
+                    } else if (rand < 0.3) {
+                        sceneryElements.push({type: 'lamppost', x: x});
+                    } else if (rand < 0.35) {
+                        sceneryElements.push({type: 'bench', x: x});
                     }
                 }
             }
