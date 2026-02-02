@@ -205,7 +205,7 @@
         </div>
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         <div id="instructions">
-            Arrow Keys / WASD to move | SPACE to jump | Collect grapes & reach the end!
+            WASD/Arrows: move | SPACE: jump | X/F: shoot (Lv5+) | E: helicopter (Lv6+)
         </div>
 
         <div id="startScreen">
@@ -291,7 +291,23 @@
         let targetGrape = null;
         let demoJumpCooldown = 0;
 
-        const MAX_LEVEL = 5;
+        const MAX_LEVEL = 15;
+
+        // Combat system - lemon seed gun (available from level 5)
+        let seeds = [];  // Projectiles
+        let enemies = [];  // Enemy objects
+        let lastShotTime = 0;
+        const SHOT_COOLDOWN = 250;  // ms between shots
+
+        // Helicopter system (available from level 6)
+        let helicopter = {
+            active: false,
+            available: false,
+            x: 0,
+            y: 0,
+            fuel: 100,
+            maxFuel: 100
+        };
 
         // ========================================
         // WORLD & CAMERA SYSTEM
@@ -329,7 +345,17 @@
                 2: 'countryside',
                 3: 'suburbs',
                 4: 'suburbs',
-                5: 'downtown'
+                5: 'downtown',
+                6: 'downtown',
+                7: 'countryside',
+                8: 'suburbs',
+                9: 'downtown',
+                10: 'countryside',
+                11: 'suburbs',
+                12: 'downtown',
+                13: 'countryside',
+                14: 'suburbs',
+                15: 'downtown'
             };
             const theme = levelThemes[levelNum] || 'countryside';
             return { ...SCENES[theme], name: theme };
@@ -1034,6 +1060,192 @@
             });
         }
 
+        // Draw a lemon seed projectile
+        function drawSeed(x, y) {
+            ctx.fillStyle = '#F5DEB3';
+            ctx.beginPath();
+            ctx.ellipse(x, y, 6 * scale, 3 * scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#D2B48C';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Draw enemy based on type
+        function drawEnemy(enemy, screenX) {
+            const x = screenX;
+            const y = enemy.y;
+            const s = scale;
+
+            if (enemy.type === 'walker') {
+                // Angry lemon - walks back and forth
+                ctx.fillStyle = '#FFE135';
+                ctx.beginPath();
+                ctx.ellipse(x, y, 20 * s, 16 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#DAA520';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                // Angry eyes
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(x - 6 * s, y - 4 * s, 3 * s, 0, Math.PI * 2);
+                ctx.arc(x + 6 * s, y - 4 * s, 3 * s, 0, Math.PI * 2);
+                ctx.fill();
+                // Angry eyebrows
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x - 10 * s, y - 10 * s);
+                ctx.lineTo(x - 3 * s, y - 7 * s);
+                ctx.moveTo(x + 10 * s, y - 10 * s);
+                ctx.lineTo(x + 3 * s, y - 7 * s);
+                ctx.stroke();
+                // Frown
+                ctx.beginPath();
+                ctx.arc(x, y + 8 * s, 6 * s, 1.2 * Math.PI, 1.8 * Math.PI);
+                ctx.stroke();
+                // Legs
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x - 8 * s, y + 14 * s);
+                ctx.lineTo(x - 10 * s, y + 25 * s);
+                ctx.moveTo(x + 8 * s, y + 14 * s);
+                ctx.lineTo(x + 10 * s, y + 25 * s);
+                ctx.stroke();
+            } else if (enemy.type === 'flyer') {
+                // Flying lime with wings
+                ctx.fillStyle = '#32CD32';
+                ctx.beginPath();
+                ctx.arc(x, y, 15 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#228B22';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                // Wings
+                ctx.fillStyle = 'rgba(200, 200, 255, 0.7)';
+                const wingFlap = Math.sin(Date.now() * 0.02) * 5;
+                ctx.beginPath();
+                ctx.ellipse(x - 20 * s, y - wingFlap * s, 12 * s, 6 * s, -0.3, 0, Math.PI * 2);
+                ctx.ellipse(x + 20 * s, y - wingFlap * s, 12 * s, 6 * s, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                // Eyes
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+                ctx.arc(x + 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (enemy.type === 'jumper') {
+                // Jumping orange
+                ctx.fillStyle = '#FFA500';
+                ctx.beginPath();
+                ctx.arc(x, y, 18 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#FF8C00';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                // Leaf on top
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.ellipse(x, y - 20 * s, 5 * s, 8 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Eyes
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(x - 6 * s, y - 4 * s, 3 * s, 0, Math.PI * 2);
+                ctx.arc(x + 6 * s, y - 4 * s, 3 * s, 0, Math.PI * 2);
+                ctx.fill();
+                // Determined mouth
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x - 6 * s, y + 6 * s);
+                ctx.lineTo(x + 6 * s, y + 6 * s);
+                ctx.stroke();
+            }
+
+            // Health indicator
+            if (enemy.health > 1) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(x - 15 * s, y - 30 * s, 30 * s, 5 * s);
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(x - 15 * s, y - 30 * s, (enemy.health / 2) * 30 * s, 5 * s);
+            }
+        }
+
+        // Draw helicopter
+        function drawHelicopter(x, y, isPickup) {
+            const s = scale;
+
+            if (isPickup) {
+                // Glowing pickup effect
+                ctx.fillStyle = 'rgba(100, 200, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(x, y, 40 * s + Math.sin(Date.now() * 0.005) * 5 * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Body
+            ctx.fillStyle = '#4169E1';
+            ctx.beginPath();
+            ctx.ellipse(x, y, 30 * s, 15 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Cockpit
+            ctx.fillStyle = '#87CEEB';
+            ctx.beginPath();
+            ctx.ellipse(x + 15 * s, y, 12 * s, 10 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Tail
+            ctx.fillStyle = '#4169E1';
+            ctx.beginPath();
+            ctx.moveTo(x - 25 * s, y - 5 * s);
+            ctx.lineTo(x - 50 * s, y - 8 * s);
+            ctx.lineTo(x - 50 * s, y + 8 * s);
+            ctx.lineTo(x - 25 * s, y + 5 * s);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Tail rotor
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x - 52 * s, y - 15 * s, 4 * s, 30 * s);
+
+            // Main rotor
+            const rotorAngle = Date.now() * 0.03;
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3 * s;
+            ctx.beginPath();
+            ctx.moveTo(x + Math.cos(rotorAngle) * 40 * s, y - 18 * s);
+            ctx.lineTo(x - Math.cos(rotorAngle) * 40 * s, y - 18 * s);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + Math.sin(rotorAngle) * 40 * s, y - 18 * s);
+            ctx.lineTo(x - Math.sin(rotorAngle) * 40 * s, y - 18 * s);
+            ctx.stroke();
+
+            // Rotor hub
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(x, y - 18 * s, 5 * s, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Skids
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3 * s;
+            ctx.beginPath();
+            ctx.moveTo(x - 20 * s, y + 15 * s);
+            ctx.lineTo(x - 20 * s, y + 22 * s);
+            ctx.lineTo(x + 20 * s, y + 22 * s);
+            ctx.lineTo(x + 20 * s, y + 15 * s);
+            ctx.stroke();
+        }
 
         // Draw platforms (already in screen coords)
         function drawPlatform(p) {
@@ -1145,6 +1357,47 @@
 
             // Update gravity based on screen height
             gravity = 0.6 * scaleY;
+
+            // Clear projectiles
+            seeds = [];
+
+            // Generate enemies (starting from level 5)
+            enemies = [];
+            if (levelNum >= 5) {
+                const enemyCount = 2 + (levelNum - 5) * 2;  // More enemies at higher levels
+                const enemySpacing = worldWidth / (enemyCount + 2);
+
+                for (let i = 0; i < enemyCount; i++) {
+                    const ex = enemySpacing * (i + 1.5 + Math.random() * 0.5);
+                    const enemyTypes = ['walker', 'flyer', 'jumper'];
+                    const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+
+                    enemies.push({
+                        x: ex,
+                        y: type === 'flyer' ? groundY - 150 * scaleY : groundY - 40 * scaleY,
+                        width: 40 * scale,
+                        height: 40 * scale,
+                        vx: (Math.random() > 0.5 ? 1 : -1) * 2 * scaleX,
+                        vy: 0,
+                        type: type,
+                        health: type === 'flyer' ? 1 : 2,
+                        jumpTimer: 0,
+                        startX: ex,
+                        patrolRange: 200 * scaleX
+                    });
+                }
+            }
+
+            // Set up helicopter (available from level 6)
+            helicopter.available = levelNum >= 6;
+            helicopter.active = false;
+            helicopter.fuel = helicopter.maxFuel;
+            if (helicopter.available) {
+                // Place helicopter pickup near start
+                helicopter.pickupX = 200 * scaleX;
+                helicopter.pickupY = groundY - 80 * scaleY;
+                helicopter.pickedUp = false;
+            }
         }
 
         // Generate scenery elements based on theme (consistent throughout level)
@@ -1367,14 +1620,70 @@
                     duck.vx *= friction;
                 }
 
-                if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['touchJump']) && duck.onGround) {
+                if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['touchJump']) && duck.onGround && !helicopter.active) {
                     duck.vy = duck.jumpForce;
                     duck.onGround = false;
                     keys['touchJump'] = false; // Reset tap jump
                 }
+
+                // Shooting (X key or F key) - available from level 5
+                if ((keys['KeyX'] || keys['KeyF']) && level >= 5) {
+                    const now = Date.now();
+                    if (now - lastShotTime > SHOT_COOLDOWN) {
+                        seeds.push({
+                            x: duck.x + (duck.facing > 0 ? duck.width : 0),
+                            y: duck.y + duck.height / 2,
+                            vx: duck.facing * 12 * scaleX,
+                            vy: 0
+                        });
+                        lastShotTime = now;
+                    }
+                }
+
+                // Helicopter controls (E to toggle, Space to fly up when active)
+                if (keys['KeyE'] && helicopter.available && !keys['helicopterToggled']) {
+                    keys['helicopterToggled'] = true;
+                    if (!helicopter.pickedUp) {
+                        // Check if near helicopter pickup
+                        const distToPickup = Math.abs(duck.x - helicopter.pickupX) + Math.abs(duck.y - helicopter.pickupY);
+                        if (distToPickup < 100 * scale) {
+                            helicopter.pickedUp = true;
+                            helicopter.active = true;
+                            showMessage("Helicopter activated! Space to fly!");
+                        }
+                    } else {
+                        helicopter.active = !helicopter.active;
+                        if (helicopter.active && helicopter.fuel > 0) {
+                            showMessage("Helicopter ON");
+                        } else {
+                            showMessage("Helicopter OFF");
+                        }
+                    }
+                }
+                if (!keys['KeyE']) keys['helicopterToggled'] = false;
+
+                // Helicopter flying
+                if (helicopter.active && helicopter.fuel > 0) {
+                    if (keys['Space'] || keys['ArrowUp'] || keys['KeyW']) {
+                        duck.vy = -6 * scaleY;  // Fly up
+                        helicopter.fuel -= 0.3;
+                    } else {
+                        duck.vy += gravity * 0.3;  // Slow fall
+                    }
+                    // Helicopter uses fuel slowly even when not ascending
+                    helicopter.fuel -= 0.05;
+                    if (helicopter.fuel <= 0) {
+                        helicopter.fuel = 0;
+                        helicopter.active = false;
+                        showMessage("Out of fuel!");
+                    }
+                }
             }
 
-            duck.vy += gravity;
+            // Apply gravity (reduced if helicopter active)
+            if (!helicopter.active) {
+                duck.vy += gravity;
+            }
             duck.x += duck.vx;
             duck.y += duck.vy;
 
@@ -1396,7 +1705,7 @@
             if (gameRunning && !levelCompleting && duck.x > worldWidth - 100 * scaleX && grapesCollected === totalGrapes) {
                 levelCompleting = true;
                 if (level >= MAX_LEVEL) {
-                    showMessage("You Win! Reached the city!");
+                    showMessage("You Win! All 15 levels complete!");
                     setTimeout(() => {
                         gameRunning = false;
                         levelCompleting = false;
@@ -1425,6 +1734,92 @@
             }
 
             checkPlatformCollision();
+
+            // Update seeds (projectiles)
+            for (let i = seeds.length - 1; i >= 0; i--) {
+                const seed = seeds[i];
+                seed.x += seed.vx;
+                seed.y += seed.vy;
+                seed.vy += gravity * 0.3;  // Slight arc
+
+                // Remove if off screen
+                if (seed.x < camera.x - 50 || seed.x > camera.x + canvas.width + 50 ||
+                    seed.y > canvas.height) {
+                    seeds.splice(i, 1);
+                    continue;
+                }
+
+                // Check collision with enemies
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const enemy = enemies[j];
+                    const dx = seed.x - enemy.x;
+                    const dy = seed.y - enemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 30 * scale) {
+                        enemy.health--;
+                        seeds.splice(i, 1);
+                        if (enemy.health <= 0) {
+                            enemies.splice(j, 1);
+                            showMessage("Enemy defeated!");
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Update enemies
+            const groundY = canvas.height * 0.86;
+            for (const enemy of enemies) {
+                if (enemy.type === 'walker') {
+                    // Patrol back and forth
+                    enemy.x += enemy.vx;
+                    if (Math.abs(enemy.x - enemy.startX) > enemy.patrolRange) {
+                        enemy.vx = -enemy.vx;
+                    }
+                    enemy.y = groundY - 25 * scale;
+                } else if (enemy.type === 'flyer') {
+                    // Fly in a sine wave pattern
+                    enemy.x += enemy.vx;
+                    enemy.y = groundY - 150 * scaleY + Math.sin(Date.now() * 0.003 + enemy.startX) * 50 * scaleY;
+                    if (Math.abs(enemy.x - enemy.startX) > enemy.patrolRange) {
+                        enemy.vx = -enemy.vx;
+                    }
+                } else if (enemy.type === 'jumper') {
+                    // Jump periodically
+                    enemy.x += enemy.vx * 0.5;
+                    enemy.vy += gravity;
+                    enemy.y += enemy.vy;
+                    if (enemy.y > groundY - 20 * scale) {
+                        enemy.y = groundY - 20 * scale;
+                        enemy.vy = 0;
+                        enemy.jumpTimer++;
+                        if (enemy.jumpTimer > 60) {
+                            enemy.vy = -12 * scaleY;
+                            enemy.jumpTimer = 0;
+                        }
+                    }
+                    if (Math.abs(enemy.x - enemy.startX) > enemy.patrolRange) {
+                        enemy.vx = -enemy.vx;
+                    }
+                }
+
+                // Check collision with duck
+                if (gameRunning) {
+                    const dx = (duck.x + duck.width / 2) - enemy.x;
+                    const dy = (duck.y + duck.height / 2) - enemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 40 * scale) {
+                        // Duck hit by enemy - reset position
+                        duck.x = 50 * scaleX;
+                        duck.y = groundY - duck.height - 10;
+                        duck.vx = 0;
+                        duck.vy = 0;
+                        camera.x = 0;
+                        helicopter.active = false;
+                        showMessage("Ouch! Watch out for enemies!");
+                    }
+                }
+            }
 
             // Only collect grapes and update UI when game is running
             if (gameRunning) {
@@ -1498,9 +1893,38 @@
                 }
             }
 
+            // Helicopter pickup (if available and not picked up)
+            if (helicopter.available && !helicopter.pickedUp) {
+                const heliScreenX = helicopter.pickupX - camera.x;
+                if (heliScreenX > -100 && heliScreenX < canvas.width + 100) {
+                    drawHelicopter(heliScreenX, helicopter.pickupY, true);
+                }
+            }
+
+            // Enemies (with camera offset)
+            for (const enemy of enemies) {
+                const screenX = enemy.x - camera.x;
+                if (screenX > -50 && screenX < canvas.width + 50) {
+                    drawEnemy(enemy, screenX);
+                }
+            }
+
+            // Seeds/projectiles (with camera offset)
+            for (const seed of seeds) {
+                const screenX = seed.x - camera.x;
+                if (screenX > -20 && screenX < canvas.width + 20) {
+                    drawSeed(screenX, seed.y);
+                }
+            }
+
             // Duck (with camera offset)
             const duckScreenX = duck.x - camera.x;
             drawDuck(duckScreenX, duck.y, duck.facing, duck.walkFrame);
+
+            // Draw helicopter around duck if active
+            if (helicopter.active) {
+                drawHelicopter(duckScreenX + duck.width / 2, duck.y + duck.height / 2, false);
+            }
 
             // Speech bubble when near lemonade stand
             const standElem = sceneryElements.find(e => e.type === 'lemonadeStand');
@@ -1539,6 +1963,37 @@
             ctx.fillRect(10 * scale, canvas.height - 20 * scaleY, 100 * scale, 8 * scaleY);
             ctx.fillStyle = '#FFD700';
             ctx.fillRect(10 * scale, canvas.height - 20 * scaleY, progress * 100 * scale, 8 * scaleY);
+
+            // Gun indicator (level 5+)
+            if (level >= 5 && gameRunning) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(canvas.width - 120 * scale, canvas.height - 50 * scaleY, 110 * scale, 40 * scaleY);
+                ctx.fillStyle = '#F5DEB3';
+                ctx.font = `bold ${12 * scale}px Comic Sans MS`;
+                ctx.textAlign = 'left';
+                ctx.fillText('SEED GUN', canvas.width - 115 * scale, canvas.height - 32 * scaleY);
+                ctx.fillStyle = '#FFF';
+                ctx.font = `${10 * scale}px Comic Sans MS`;
+                ctx.fillText('Press X/F to shoot', canvas.width - 115 * scale, canvas.height - 18 * scaleY);
+            }
+
+            // Helicopter fuel indicator (level 6+)
+            if (helicopter.available && helicopter.pickedUp && gameRunning) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(canvas.width - 120 * scale, canvas.height - 95 * scaleY, 110 * scale, 40 * scaleY);
+                ctx.fillStyle = '#4169E1';
+                ctx.font = `bold ${12 * scale}px Comic Sans MS`;
+                ctx.textAlign = 'left';
+                ctx.fillText('HELICOPTER', canvas.width - 115 * scale, canvas.height - 77 * scaleY);
+                // Fuel bar
+                ctx.fillStyle = '#333';
+                ctx.fillRect(canvas.width - 115 * scale, canvas.height - 68 * scaleY, 100 * scale, 8 * scaleY);
+                ctx.fillStyle = helicopter.fuel > 20 ? '#32CD32' : '#FF4500';
+                ctx.fillRect(canvas.width - 115 * scale, canvas.height - 68 * scaleY, (helicopter.fuel / helicopter.maxFuel) * 100 * scale, 8 * scaleY);
+                ctx.fillStyle = '#FFF';
+                ctx.font = `${9 * scale}px Comic Sans MS`;
+                ctx.fillText('E: toggle, Space: fly', canvas.width - 115 * scale, canvas.height - 55 * scaleY);
+            }
 
             // End zone indicator (arrow pointing right at edge of screen when near end)
             if (duck.x > worldWidth - canvas.width * 1.5) {
