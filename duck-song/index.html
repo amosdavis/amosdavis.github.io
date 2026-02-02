@@ -28,20 +28,25 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            padding: 10px;
             width: 100%;
             height: 100%;
             max-width: 900px;
+            overflow: hidden;
         }
-        /* Make canvas scale down on small screens while keeping the game's logical resolution (800x500) */
+        /* Make canvas fit within viewport */
         #gameCanvas {
             border: 4px solid #8B4513;
             border-radius: 8px;
             box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
-            width: min(95vw, 800px);
+            max-width: 95vw;
+            max-height: calc(100vh - 120px);
+            max-height: calc(100dvh - 120px);
+            width: auto;
             height: auto;
             display: block;
             touch-action: none; /* prevent browser gestures interfering with game touches */
+            object-fit: contain;
         }
         /* Full screen mode for mobile - detect touch devices */
         @media (pointer: coarse), (max-width: 600px) {
@@ -101,7 +106,7 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
             text-align: center;
         }
-        #musicBtn {
+        #musicBtn, #fullscreenBtn {
             background: #FFD700;
             border: none;
             padding: 8px 16px;
@@ -111,8 +116,36 @@
             font-size: 14px;
             transition: transform 0.1s;
         }
-        #musicBtn:hover {
+        #musicBtn:hover, #fullscreenBtn:hover {
             transform: scale(1.05);
+        }
+        #fullscreenBtn {
+            background: #4CAF50;
+            color: white;
+        }
+        /* Fullscreen styles */
+        #gameContainer:fullscreen, #gameContainer:-webkit-full-screen {
+            max-width: none;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        #gameContainer:fullscreen #gameCanvas, #gameContainer:-webkit-full-screen #gameCanvas {
+            max-width: 100vw;
+            max-height: calc(100vh - 60px);
+            border: none;
+            border-radius: 0;
+        }
+        #gameContainer:fullscreen #title, #gameContainer:-webkit-full-screen #title,
+        #gameContainer:fullscreen #instructions, #gameContainer:-webkit-full-screen #instructions {
+            display: none;
+        }
+        #gameContainer:fullscreen #ui, #gameContainer:-webkit-full-screen #ui {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            margin: 0;
         }
         #startScreen, #winScreen {
             position: absolute;
@@ -168,6 +201,7 @@
             <span>Grapes: <span id="grapeCount">0</span></span>
             <span>Level: <span id="levelNum">1</span></span>
             <button id="musicBtn" onclick="toggleMusic()">Music: OFF</button>
+            <button id="fullscreenBtn" onclick="toggleFullscreen()">Fullscreen</button>
         </div>
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         <div id="instructions">
@@ -347,6 +381,46 @@
                 musicPlaying = true;
             }
         }
+
+        function toggleFullscreen() {
+            const container = document.getElementById('gameContainer');
+            const btn = document.getElementById('fullscreenBtn');
+
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                // Enter fullscreen
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                }
+                btn.textContent = 'Exit Fullscreen';
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+                btn.textContent = 'Fullscreen';
+            }
+        }
+
+        // Update button text and resize canvas when fullscreen changes
+        function onFullscreenChange() {
+            const btn = document.getElementById('fullscreenBtn');
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                btn.textContent = 'Exit Fullscreen';
+            } else {
+                btn.textContent = 'Fullscreen';
+            }
+            // Resize canvas after a short delay to let the browser adjust
+            setTimeout(() => {
+                resizeCanvas();
+                generateLevel(level);
+            }, 100);
+        }
+        document.addEventListener('fullscreenchange', onFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
         // ========================================
         // NEW GRAPHICS FUNCTIONS
