@@ -266,33 +266,39 @@
         const camera = { x: 0, y: 0 };
         let sceneryElements = [];  // Background objects
 
-        // SVG Background system - 20 scenes loaded from files
-        const backgroundImages = [];
-        const TOTAL_BG_SCENES = 20;
-        let backgroundsLoaded = false;
-
-        // Load all background SVGs
-        function loadBackgrounds() {
-            let loaded = 0;
-            for (let i = 1; i <= TOTAL_BG_SCENES; i++) {
-                const img = new Image();
-                const num = i.toString().padStart(2, '0');
-                img.src = `backgrounds/scene${num}.svg`;
-                img.onload = () => {
-                    loaded++;
-                    if (loaded === TOTAL_BG_SCENES) {
-                        backgroundsLoaded = true;
-                    }
-                };
-                backgroundImages.push(img);
+        // Scene definitions for each level theme
+        const SCENES = {
+            countryside: {
+                skyColors: ['#87CEEB', '#B0E0E6'],
+                hillColor: '#3CB371',
+                groundColor: '#32CD32',
+                groundAccent: '#228B22'
+            },
+            suburbs: {
+                skyColors: ['#87CEEB', '#A8C8E8'],
+                hillColor: '#5D8C5D',
+                groundColor: '#7CBA7C',
+                groundAccent: '#5A9A5A'
+            },
+            downtown: {
+                skyColors: ['#6B8CAE', '#8899AA'],
+                hillColor: '#4A4A4A',
+                groundColor: '#606060',
+                groundAccent: '#505050'
             }
-        }
+        };
 
-        // Get single background for current level
-        function getBackgroundForLevel(levelNum) {
-            // Each level uses one background
-            const bgIndex = (levelNum - 1) % TOTAL_BG_SCENES;
-            return backgroundImages[bgIndex];
+        // Get scene for current level
+        function getSceneForLevel(levelNum) {
+            const levelThemes = {
+                1: 'countryside',
+                2: 'countryside',
+                3: 'suburbs',
+                4: 'suburbs',
+                5: 'downtown'
+            };
+            const theme = levelThemes[levelNum] || 'countryside';
+            return { ...SCENES[theme], name: theme };
         }
 
         // Convert world coords to screen coords
@@ -666,49 +672,109 @@
         }
 
         // ========================================
-        // SVG BACKGROUND DRAWING
+        // PROGRAMMATIC BACKGROUND DRAWING
         // ========================================
 
-        // Draw SVG backgrounds with parallax scrolling
-        function drawSVGBackgrounds() {
-            const groundY = canvas.height * 0.86;  // Match game's ground level
+        // Draw cloud
+        function drawCloud(x, y, size) {
+            const s = size * scale;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(x, y, 20 * s, 0, Math.PI * 2);
+            ctx.arc(x + 25 * s, y - 5 * s, 25 * s, 0, Math.PI * 2);
+            ctx.arc(x + 50 * s, y, 20 * s, 0, Math.PI * 2);
+            ctx.arc(x + 15 * s, y + 10 * s, 15 * s, 0, Math.PI * 2);
+            ctx.arc(x + 35 * s, y + 8 * s, 18 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-            if (!backgroundsLoaded || backgroundImages.length === 0) {
-                // Fallback: simple gradient while loading
-                const gradient = ctx.createLinearGradient(0, 0, 0, groundY);
-                gradient.addColorStop(0, '#87CEEB');
-                gradient.addColorStop(0.7, '#B0E0E6');
-                gradient.addColorStop(1, '#90EE90');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, groundY);
+        // Draw backgrounds (consistent per level)
+        function drawBackgrounds() {
+            const groundY = canvas.height * 0.86;
+            const scene = getSceneForLevel(level);
+            const horizonY = canvas.height * 0.6;
 
-                // Ground
-                ctx.fillStyle = '#32CD32';
-                ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-                return;
+            // Sky gradient
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, horizonY);
+            skyGradient.addColorStop(0, scene.skyColors[0]);
+            skyGradient.addColorStop(1, scene.skyColors[1]);
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, horizonY);
+
+            // Sun (with parallax)
+            const parallaxOffset = camera.x * 0.1;
+            const sunX = canvas.width * 0.85 - parallaxOffset * 0.3;
+            const sunY = canvas.height * 0.12;
+            const sunR = 35 * scale;
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+            ctx.fill();
+
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3 * scale;
+                ctx.beginPath();
+                ctx.moveTo(sunX + Math.cos(angle) * sunR * 1.15, sunY + Math.sin(angle) * sunR * 1.15);
+                ctx.lineTo(sunX + Math.cos(angle) * sunR * 1.6, sunY + Math.sin(angle) * sunR * 1.6);
+                ctx.stroke();
             }
 
-            // Get single background for current level
-            const levelBg = getBackgroundForLevel(level);
-            if (!levelBg) return;
+            // Clouds (slow parallax)
+            const cloudOffset = parallaxOffset * 0.5;
+            drawCloud(((100 - cloudOffset) % (canvas.width + 200) + canvas.width + 200) % (canvas.width + 200) - 100, 60 * scaleY, 0.8);
+            drawCloud(((400 - cloudOffset) % (canvas.width + 200) + canvas.width + 200) % (canvas.width + 200) - 100, 40 * scaleY, 1);
+            drawCloud(((700 - cloudOffset) % (canvas.width + 200) + canvas.width + 200) % (canvas.width + 200) - 100, 70 * scaleY, 0.6);
 
-            // Draw background filling the screen (static, no movement)
-            ctx.drawImage(levelBg, 0, 0, canvas.width, groundY);
+            // Rolling hills (with parallax)
+            ctx.fillStyle = scene.hillColor;
+            ctx.beginPath();
+            ctx.moveTo(0, horizonY);
+            const hillCount = 4;
+            for (let i = 0; i <= hillCount; i++) {
+                const hx = (i / hillCount) * canvas.width;
+                const offset = ((parallaxOffset * 0.3) + i * 200) % 400;
+                const hillHeight = 50 + Math.sin(offset * 0.02) * 30;
+                ctx.quadraticCurveTo(
+                    hx + canvas.width / (hillCount * 2),
+                    horizonY - hillHeight * scaleY,
+                    hx + canvas.width / hillCount,
+                    horizonY
+                );
+            }
+            ctx.lineTo(canvas.width, groundY);
+            ctx.lineTo(0, groundY);
+            ctx.closePath();
+            ctx.fill();
 
-            // Draw ground below the SVG backgrounds (the playable ground area)
-            ctx.fillStyle = '#32CD32';  // Bright green grass
+            // Ground
+            ctx.fillStyle = scene.groundColor;
             ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
 
-            // Ground texture - grass blades
-            ctx.strokeStyle = '#228B22';
+            // Ground texture
+            ctx.strokeStyle = scene.groundAccent;
             ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += 15 * scale) {
+            if (scene.name === 'countryside' || scene.name === 'suburbs') {
+                // Grass blades
+                for (let i = 0; i < canvas.width; i += 15 * scale) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, groundY);
+                    ctx.lineTo(i + 3 * scale, groundY - 5 * scaleY);
+                    ctx.moveTo(i + 7 * scale, groundY);
+                    ctx.lineTo(i + 10 * scale, groundY - 7 * scaleY);
+                    ctx.stroke();
+                }
+            } else {
+                // Street markings for downtown
+                ctx.strokeStyle = '#FFFF00';
+                ctx.lineWidth = 3 * scale;
+                ctx.setLineDash([30 * scale, 20 * scale]);
                 ctx.beginPath();
-                ctx.moveTo(i, groundY);
-                ctx.lineTo(i + 3 * scale, groundY - 5 * scaleY);
-                ctx.moveTo(i + 7 * scale, groundY);
-                ctx.lineTo(i + 10 * scale, groundY - 7 * scaleY);
+                ctx.moveTo(0, groundY + 30 * scaleY);
+                ctx.lineTo(canvas.width, groundY + 30 * scaleY);
                 ctx.stroke();
+                ctx.setLineDash([]);
             }
         }
 
@@ -1237,8 +1303,8 @@
 
             const groundY = canvas.height * 0.86;
 
-            // Draw SVG backgrounds
-            drawSVGBackgrounds();
+            // Draw programmatic backgrounds
+            drawBackgrounds();
 
             // Level indicator (fixed on screen)
             ctx.fillStyle = 'rgba(0,0,0,0.15)';
@@ -1246,16 +1312,15 @@
             ctx.textAlign = 'center';
             ctx.fillText('LEVEL ' + level, canvas.width/2, canvas.height * 0.55);
 
-            // Draw only lemonade stand and finish banner (skip all other scenery)
+            // Draw scenery elements (with camera offset)
             for (const elem of sceneryElements) {
                 const screenX = elem.x - camera.x;
                 if (screenX > -200 * scale && screenX < canvas.width + 200 * scale) {
                     if (elem.type === 'lemonadeStand') {
                         drawLemonadeStandAt(screenX);
-                    } else if (elem.type === 'finishBanner') {
+                    } else {
                         drawSceneryElement(elem, screenX);
                     }
-                    // Skip all other scenery (trees, houses, buildings, etc.)
                 }
             }
 
@@ -1630,7 +1695,6 @@
         });
 
         // Initialize
-        loadBackgrounds();
         resizeCanvas();
         generateLevel(1);
         gameLoop();
