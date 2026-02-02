@@ -178,6 +178,11 @@
             <h1 style="color: #FFD700; font-size: 36px;">The Duck Song Game</h1>
             <p style="margin: 20px 0; font-size: 18px;">Help the duck collect grapes!<br>Visit the lemonade stand along the way.</p>
             <p style="color: #aaa;">Desktop: Arrow Keys / WASD + Space<br>Mobile: Tilt to move, Tap to jump!<br><span style="font-size: 12px;">(Or tap left/right sides to move)</span></p>
+            <div style="margin: 15px 0; width: 100%;">
+                <label style="color: #aaa; font-size: 14px;">Tilt Sensitivity: <span id="sensitivityValue">50</span>%</label>
+                <input type="range" id="tiltSensitivity" min="10" max="100" value="50"
+                    style="width: 80%; margin-top: 8px; cursor: pointer;">
+            </div>
             <button class="screen-btn" onclick="startGame()">Start Game!</button>
         </div>
 
@@ -1050,8 +1055,17 @@
 
         // Tilt controls for movement (uses device orientation)
         let tiltEnabled = false;
+        let tiltSensitivity = 0.5; // 0.1 to 1.0, controlled by slider
         const tiltDeadzone = 5; // degrees of deadzone before movement starts
         const tiltMaxAngle = 20; // degrees at which full speed is reached
+
+        // Sensitivity slider handler
+        const sensitivitySlider = document.getElementById('tiltSensitivity');
+        const sensitivityValue = document.getElementById('sensitivityValue');
+        sensitivitySlider.addEventListener('input', (e) => {
+            tiltSensitivity = e.target.value / 100;
+            sensitivityValue.textContent = e.target.value;
+        });
 
         function handleOrientation(e) {
             if (!gameRunning || demoMode) return;
@@ -1059,19 +1073,23 @@
             // gamma is left-right tilt (-90 to 90)
             let tilt = e.gamma || 0;
 
+            // Apply sensitivity - lower sensitivity = need more tilt
+            const adjustedDeadzone = tiltDeadzone + (1 - tiltSensitivity) * 10;
+            const adjustedMaxAngle = tiltMaxAngle + (1 - tiltSensitivity) * 20;
+
             // Handle device held in portrait mode
-            if (tilt > tiltDeadzone) {
+            if (tilt > adjustedDeadzone) {
                 // Tilted right
                 keys['tiltRight'] = true;
                 keys['tiltLeft'] = false;
-                duck.tiltAmount = Math.min((tilt - tiltDeadzone) / (tiltMaxAngle - tiltDeadzone), 1);
-                duck.tiltAmount = Math.max(duck.tiltAmount, 0.4); // minimum speed when tilting
-            } else if (tilt < -tiltDeadzone) {
+                duck.tiltAmount = Math.min((tilt - adjustedDeadzone) / (adjustedMaxAngle - adjustedDeadzone), 1);
+                duck.tiltAmount = Math.max(duck.tiltAmount, 0.3 + tiltSensitivity * 0.4); // min speed scales with sensitivity
+            } else if (tilt < -adjustedDeadzone) {
                 // Tilted left
                 keys['tiltLeft'] = true;
                 keys['tiltRight'] = false;
-                duck.tiltAmount = Math.min((-tilt - tiltDeadzone) / (tiltMaxAngle - tiltDeadzone), 1);
-                duck.tiltAmount = Math.max(duck.tiltAmount, 0.4); // minimum speed when tilting
+                duck.tiltAmount = Math.min((-tilt - adjustedDeadzone) / (adjustedMaxAngle - adjustedDeadzone), 1);
+                duck.tiltAmount = Math.max(duck.tiltAmount, 0.3 + tiltSensitivity * 0.4); // min speed scales with sensitivity
             } else {
                 keys['tiltLeft'] = false;
                 keys['tiltRight'] = false;
