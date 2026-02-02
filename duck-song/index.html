@@ -54,17 +54,10 @@
                 max-width: none;
                 height: 100%;
                 height: -webkit-fill-available;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                background: #000;
             }
             #gameCanvas {
-                /* Maintain 800:500 (8:5) aspect ratio */
-                width: min(100vw, calc(100vh * 8 / 5));
-                height: min(100vh, calc(100vw * 5 / 8));
-                max-width: 100vw;
-                max-height: 100vh;
+                width: 100%;
+                height: 100%;
                 border: none;
                 border-radius: 0;
             }
@@ -210,6 +203,36 @@
         const startScreen = document.getElementById('startScreen');
         const winScreen = document.getElementById('winScreen');
 
+        // Reference dimensions (original design)
+        const REF_WIDTH = 800;
+        const REF_HEIGHT = 500;
+
+        // Scale factors - updated on resize
+        let scaleX = 1;
+        let scaleY = 1;
+        let scale = 1; // uniform scale for sprites
+
+        // Resize canvas to fill screen
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            canvas.width = container.clientWidth || window.innerWidth;
+            canvas.height = container.clientHeight || window.innerHeight;
+
+            scaleX = canvas.width / REF_WIDTH;
+            scaleY = canvas.height / REF_HEIGHT;
+            scale = Math.min(scaleX, scaleY); // uniform scale for sprites
+
+            // Update duck size based on scale
+            duck.width = 50 * scale;
+            duck.height = 60 * scale;
+            duck.speed = 5 * scaleX;
+            duck.jumpForce = -14 * scaleY;
+        }
+
+        // Helper to convert reference coords to screen coords
+        function sx(x) { return x * scaleX; }
+        function sy(y) { return y * scaleY; }
+
         // Game state
         let gameRunning = false;
         let demoMode = true;
@@ -230,7 +253,7 @@
 
         const MAX_LEVEL = 5;
 
-        // Duck player
+        // Duck player (positions will be in screen coords)
         const duck = {
             x: 100,
             y: 300,
@@ -247,17 +270,11 @@
             tiltAmount: 0
         };
 
-        // Lemonade stand
-        const lemonadeStand = {
-            x: 600,
-            y: 280,
-            width: 120,
-            height: 150
-        };
-
-        // Physics
-        const gravity = 0.6;
+        // Physics (scaled on resize)
+        let gravity = 0.6;
         const friction = 0.85;
+
+        // Remove unused lemonadeStand object - position is now calculated dynamically
 
         function toggleMusic() {
             if (musicPlaying) {
@@ -271,12 +288,12 @@
             }
         }
 
-        // Draw the duck (cartoon style)
+        // Draw the duck (cartoon style) - scaled version
         function drawDuck(x, y, facing, walkFrame) {
             ctx.save();
             ctx.translate(x + duck.width/2, y + duck.height/2);
-            ctx.scale(facing, 1);
-            ctx.translate(-duck.width/2, -duck.height/2);
+            ctx.scale(facing * scale, scale);
+            ctx.translate(-25, -30); // center on reference duck size
 
             // Body (yellow oval)
             ctx.fillStyle = '#FFB830';
@@ -344,36 +361,37 @@
             ctx.restore();
         }
 
-        // Draw a grape bunch
+        // Draw a grape bunch (scaled)
         function drawGrape(x, y, size) {
+            const s = size * scale;
             const grapeColor = '#8B008B';
             const highlight = '#9932CC';
 
             ctx.strokeStyle = '#228B22';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(x, y - size);
-            ctx.lineTo(x, y - size - 10);
+            ctx.moveTo(x, y - s);
+            ctx.lineTo(x, y - s - 10 * scale);
             ctx.stroke();
 
             ctx.fillStyle = '#228B22';
             ctx.beginPath();
-            ctx.ellipse(x + 5, y - size - 8, 8, 4, 0.3, 0, Math.PI * 2);
+            ctx.ellipse(x + 5 * scale, y - s - 8 * scale, 8 * scale, 4 * scale, 0.3, 0, Math.PI * 2);
             ctx.fill();
 
             const positions = [
                 {dx: 0, dy: 0},
-                {dx: -size*0.7, dy: -size*0.4},
-                {dx: size*0.7, dy: -size*0.4},
-                {dx: -size*0.35, dy: size*0.5},
-                {dx: size*0.35, dy: size*0.5},
-                {dx: 0, dy: size*0.9}
+                {dx: -s*0.7, dy: -s*0.4},
+                {dx: s*0.7, dy: -s*0.4},
+                {dx: -s*0.35, dy: s*0.5},
+                {dx: s*0.35, dy: s*0.5},
+                {dx: 0, dy: s*0.9}
             ];
 
             positions.forEach(pos => {
                 ctx.fillStyle = grapeColor;
                 ctx.beginPath();
-                ctx.arc(x + pos.dx, y + pos.dy, size * 0.5, 0, Math.PI * 2);
+                ctx.arc(x + pos.dx, y + pos.dy, s * 0.5, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = '#4B0082';
                 ctx.lineWidth = 1;
@@ -381,189 +399,203 @@
 
                 ctx.fillStyle = highlight;
                 ctx.beginPath();
-                ctx.arc(x + pos.dx - 2, y + pos.dy - 2, size * 0.15, 0, Math.PI * 2);
+                ctx.arc(x + pos.dx - 2 * scale, y + pos.dy - 2 * scale, s * 0.15, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
 
-        // Draw lemonade stand
-        function drawLemonadeStand(x, y) {
+        // Draw lemonade stand (scaled) - positioned relative to screen
+        function drawLemonadeStand() {
+            const x = canvas.width * 0.75 - 60 * scale;
+            const y = canvas.height - sy(220);
+            const s = scale;
+
             // Stand base
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(x, y + 70, 120, 80);
+            ctx.fillRect(x, y + 70*s, 120*s, 80*s);
             ctx.strokeStyle = '#5D2E0C';
             ctx.lineWidth = 3;
-            ctx.strokeRect(x, y + 70, 120, 80);
+            ctx.strokeRect(x, y + 70*s, 120*s, 80*s);
 
             // Counter top
             ctx.fillStyle = '#A0522D';
-            ctx.fillRect(x - 5, y + 65, 130, 10);
+            ctx.fillRect(x - 5*s, y + 65*s, 130*s, 10*s);
 
             // Sign board
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(x + 10, y - 30, 100, 40);
-            ctx.strokeRect(x + 10, y - 30, 100, 40);
+            ctx.fillRect(x + 10*s, y - 30*s, 100*s, 40*s);
+            ctx.strokeRect(x + 10*s, y - 30*s, 100*s, 40*s);
 
             // Sign text
             ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 12px Comic Sans MS';
+            ctx.font = `bold ${12*s}px Comic Sans MS`;
             ctx.textAlign = 'center';
-            ctx.fillText('ICE FRESH', x + 60, y - 12);
+            ctx.fillText('ICE FRESH', x + 60*s, y - 12*s);
 
             ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 14px Comic Sans MS';
-            ctx.fillText('Lemonade', x + 60, y + 90);
+            ctx.font = `bold ${14*s}px Comic Sans MS`;
+            ctx.fillText('Lemonade', x + 60*s, y + 90*s);
 
             // Roof poles
             ctx.strokeStyle = '#8B4513';
-            ctx.lineWidth = 5;
+            ctx.lineWidth = 5*s;
             ctx.beginPath();
-            ctx.moveTo(x + 20, y - 30);
-            ctx.lineTo(x + 20, y + 70);
-            ctx.moveTo(x + 100, y - 30);
-            ctx.lineTo(x + 100, y + 70);
+            ctx.moveTo(x + 20*s, y - 30*s);
+            ctx.lineTo(x + 20*s, y + 70*s);
+            ctx.moveTo(x + 100*s, y - 30*s);
+            ctx.lineTo(x + 100*s, y + 70*s);
             ctx.stroke();
 
             // Lemonade pitcher
             ctx.fillStyle = '#FFFF99';
             ctx.beginPath();
-            ctx.ellipse(x + 45, y + 55, 12, 15, 0, 0, Math.PI * 2);
+            ctx.ellipse(x + 45*s, y + 55*s, 12*s, 15*s, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(x + 58, y + 55, 8, -Math.PI/2, Math.PI/2);
+            ctx.arc(x + 58*s, y + 55*s, 8*s, -Math.PI/2, Math.PI/2);
             ctx.stroke();
 
             // Lemonade man
             ctx.fillStyle = '#FDBF6F';
             ctx.beginPath();
-            ctx.arc(x + 75, y + 30, 15, 0, Math.PI * 2);
+            ctx.arc(x + 75*s, y + 30*s, 15*s, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
             ctx.fillStyle = '#8B4513';
             ctx.beginPath();
-            ctx.arc(x + 75, y + 22, 14, Math.PI, 2 * Math.PI);
+            ctx.arc(x + 75*s, y + 22*s, 14*s, Math.PI, 2 * Math.PI);
             ctx.fill();
 
             ctx.fillStyle = 'white';
             ctx.beginPath();
-            ctx.arc(x + 70, y + 28, 4, 0, Math.PI * 2);
-            ctx.arc(x + 80, y + 28, 4, 0, Math.PI * 2);
+            ctx.arc(x + 70*s, y + 28*s, 4*s, 0, Math.PI * 2);
+            ctx.arc(x + 80*s, y + 28*s, 4*s, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = 'black';
             ctx.beginPath();
-            ctx.arc(x + 70, y + 28, 2, 0, Math.PI * 2);
-            ctx.arc(x + 80, y + 28, 2, 0, Math.PI * 2);
+            ctx.arc(x + 70*s, y + 28*s, 2*s, 0, Math.PI * 2);
+            ctx.arc(x + 80*s, y + 28*s, 2*s, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(x + 75, y + 40, 5, 0.2 * Math.PI, 0.8 * Math.PI);
+            ctx.arc(x + 75*s, y + 40*s, 5*s, 0.2 * Math.PI, 0.8 * Math.PI);
             ctx.stroke();
 
             ctx.fillStyle = '#4169E1';
-            ctx.fillRect(x + 60, y + 45, 30, 25);
+            ctx.fillRect(x + 60*s, y + 45*s, 30*s, 25*s);
         }
 
-        // Draw background
+        // Draw background (fully responsive)
         function drawBackground() {
-            // Sky gradient
-            const skyGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            const groundY = canvas.height * 0.86; // Ground starts at 86% down
+            const horizonY = canvas.height * 0.6;  // Horizon at 60% down
+
+            // Sky gradient - fills to horizon
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, horizonY);
             skyGradient.addColorStop(0, '#87CEEB');
             skyGradient.addColorStop(1, '#B0E0E6');
             ctx.fillStyle = skyGradient;
-            ctx.fillRect(0, 0, canvas.width, 300);
+            ctx.fillRect(0, 0, canvas.width, horizonY);
 
-            // Sun
+            // Sun (top right)
+            const sunX = canvas.width * 0.9;
+            const sunY = canvas.height * 0.12;
+            const sunR = 35 * scale;
             ctx.fillStyle = '#FFD700';
             ctx.beginPath();
-            ctx.arc(720, 60, 35, 0, Math.PI * 2);
+            ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
             ctx.fill();
 
             for (let i = 0; i < 8; i++) {
                 const angle = (i / 8) * Math.PI * 2;
                 ctx.strokeStyle = '#FFD700';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 3 * scale;
                 ctx.beginPath();
-                ctx.moveTo(720 + Math.cos(angle) * 40, 60 + Math.sin(angle) * 40);
-                ctx.lineTo(720 + Math.cos(angle) * 55, 60 + Math.sin(angle) * 55);
+                ctx.moveTo(sunX + Math.cos(angle) * sunR * 1.15, sunY + Math.sin(angle) * sunR * 1.15);
+                ctx.lineTo(sunX + Math.cos(angle) * sunR * 1.6, sunY + Math.sin(angle) * sunR * 1.6);
                 ctx.stroke();
             }
 
             // Hills
             ctx.fillStyle = '#3CB371';
             ctx.beginPath();
-            ctx.moveTo(0, 250);
-            ctx.quadraticCurveTo(200, 180, 400, 250);
-            ctx.quadraticCurveTo(600, 180, 800, 250);
-            ctx.lineTo(800, 300);
-            ctx.lineTo(0, 300);
+            ctx.moveTo(0, horizonY);
+            ctx.quadraticCurveTo(canvas.width * 0.25, horizonY - 70 * scaleY, canvas.width * 0.5, horizonY);
+            ctx.quadraticCurveTo(canvas.width * 0.75, horizonY - 70 * scaleY, canvas.width, horizonY);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.lineTo(0, groundY);
             ctx.closePath();
             ctx.fill();
 
-            // City silhouette
+            // City silhouette (left side)
             ctx.fillStyle = '#696969';
-            ctx.fillRect(50, 180, 30, 70);
-            ctx.fillRect(85, 200, 25, 50);
-            ctx.fillRect(115, 170, 35, 80);
-            ctx.fillRect(155, 190, 20, 60);
+            const cityX = canvas.width * 0.06;
+            const cityY = horizonY - 20 * scaleY;
+            ctx.fillRect(cityX, cityY, 30 * scale, 70 * scaleY);
+            ctx.fillRect(cityX + 35 * scale, cityY + 20 * scaleY, 25 * scale, 50 * scaleY);
+            ctx.fillRect(cityX + 65 * scale, cityY - 10 * scaleY, 35 * scale, 80 * scaleY);
+            ctx.fillRect(cityX + 105 * scale, cityY + 10 * scaleY, 20 * scale, 60 * scaleY);
 
             // Tree
+            const treeX = canvas.width * 0.23;
+            const treeY = horizonY;
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(180, 200, 15, 100);
+            ctx.fillRect(treeX, treeY, 15 * scale, 100 * scaleY);
             ctx.fillStyle = '#228B22';
             ctx.beginPath();
-            ctx.arc(187, 180, 40, 0, Math.PI * 2);
+            ctx.arc(treeX + 7 * scale, treeY - 20 * scaleY, 40 * scale, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(170, 200, 30, 0, Math.PI * 2);
+            ctx.arc(treeX - 10 * scale, treeY, 30 * scale, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(205, 195, 32, 0, Math.PI * 2);
+            ctx.arc(treeX + 25 * scale, treeY - 5 * scaleY, 32 * scale, 0, Math.PI * 2);
             ctx.fill();
 
             // Ground
             ctx.fillStyle = '#32CD32';
-            ctx.fillRect(0, 300, canvas.width, 200);
+            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
 
             // Grass texture
             ctx.strokeStyle = '#228B22';
             ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += 15) {
+            for (let i = 0; i < canvas.width; i += 15 * scale) {
                 ctx.beginPath();
-                ctx.moveTo(i, 300);
-                ctx.lineTo(i + 3, 295);
-                ctx.moveTo(i + 7, 300);
-                ctx.lineTo(i + 10, 293);
+                ctx.moveTo(i, groundY);
+                ctx.lineTo(i + 3 * scale, groundY - 5 * scaleY);
+                ctx.moveTo(i + 7 * scale, groundY);
+                ctx.lineTo(i + 10 * scale, groundY - 7 * scaleY);
                 ctx.stroke();
             }
 
             // Level indicator
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            ctx.font = 'bold 60px Comic Sans MS';
+            ctx.font = `bold ${60 * scale}px Comic Sans MS`;
             ctx.textAlign = 'center';
-            ctx.fillText('LEVEL ' + level, canvas.width/2, 180);
+            ctx.fillText('LEVEL ' + level, canvas.width/2, horizonY - 20 * scaleY);
         }
 
-        // Draw platforms
+        // Draw platforms (already in screen coords)
         function drawPlatform(p) {
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(p.x, p.y + 10, p.width, p.height - 10);
+            ctx.fillRect(p.x, p.y + 10 * scaleY, p.width, p.height - 10 * scaleY);
 
             ctx.fillStyle = '#32CD32';
-            ctx.fillRect(p.x, p.y, p.width, 15);
+            ctx.fillRect(p.x, p.y, p.width, 15 * scaleY);
 
             ctx.strokeStyle = '#228B22';
             ctx.lineWidth = 1;
-            for (let i = p.x; i < p.x + p.width; i += 10) {
+            for (let i = p.x; i < p.x + p.width; i += 10 * scale) {
                 ctx.beginPath();
-                ctx.moveTo(i + 2, p.y);
-                ctx.lineTo(i + 4, p.y - 5);
+                ctx.moveTo(i + 2 * scale, p.y);
+                ctx.lineTo(i + 4 * scale, p.y - 5 * scaleY);
                 ctx.stroke();
             }
 
@@ -572,77 +604,94 @@
             ctx.strokeRect(p.x, p.y, p.width, p.height);
         }
 
-        // Generate level
+        // Generate level (all positions as fractions 0-1, converted to screen coords)
         function generateLevel(levelNum) {
             platforms = [];
             grapes = [];
             grapesCollected = 0;
 
-            // Ground platform
-            platforms.push({x: 0, y: 430, width: 800, height: 70});
+            const groundY = canvas.height * 0.86;
 
+            // Ground platform
+            platforms.push({x: 0, y: groundY, width: canvas.width, height: canvas.height - groundY});
+
+            // Level configs use fractions (0-1) for positions
             const configs = {
                 1: {
                     platforms: [
-                        {x: 80, y: 350, width: 100, height: 20},
-                        {x: 250, y: 280, width: 100, height: 20},
-                        {x: 420, y: 350, width: 100, height: 20}
+                        {x: 0.10, y: 0.70, w: 0.125},
+                        {x: 0.31, y: 0.56, w: 0.125},
+                        {x: 0.52, y: 0.70, w: 0.125}
                     ],
-                    grapes: [{x: 130, y: 320}, {x: 300, y: 250}, {x: 470, y: 320}, {x: 200, y: 400}]
+                    grapes: [{x: 0.16, y: 0.64}, {x: 0.37, y: 0.50}, {x: 0.59, y: 0.64}, {x: 0.25, y: 0.80}]
                 },
                 2: {
                     platforms: [
-                        {x: 50, y: 360, width: 100, height: 20},
-                        {x: 220, y: 290, width: 100, height: 20},
-                        {x: 390, y: 220, width: 100, height: 20}
+                        {x: 0.06, y: 0.72, w: 0.125},
+                        {x: 0.27, y: 0.58, w: 0.125},
+                        {x: 0.49, y: 0.44, w: 0.125}
                     ],
-                    grapes: [{x: 100, y: 330}, {x: 270, y: 260}, {x: 440, y: 190}, {x: 300, y: 400}, {x: 500, y: 400}]
+                    grapes: [{x: 0.12, y: 0.66}, {x: 0.34, y: 0.52}, {x: 0.55, y: 0.38}, {x: 0.37, y: 0.80}, {x: 0.62, y: 0.80}]
                 },
                 3: {
                     platforms: [
-                        {x: 30, y: 370, width: 90, height: 20},
-                        {x: 180, y: 300, width: 90, height: 20},
-                        {x: 330, y: 230, width: 90, height: 20},
-                        {x: 480, y: 300, width: 90, height: 20}
+                        {x: 0.04, y: 0.74, w: 0.11},
+                        {x: 0.22, y: 0.60, w: 0.11},
+                        {x: 0.41, y: 0.46, w: 0.11},
+                        {x: 0.60, y: 0.60, w: 0.11}
                     ],
-                    grapes: [{x: 75, y: 340}, {x: 225, y: 270}, {x: 375, y: 200}, {x: 525, y: 270}, {x: 150, y: 400}, {x: 400, y: 400}]
+                    grapes: [{x: 0.09, y: 0.68}, {x: 0.28, y: 0.54}, {x: 0.47, y: 0.40}, {x: 0.66, y: 0.54}, {x: 0.19, y: 0.80}, {x: 0.50, y: 0.80}]
                 },
                 4: {
                     platforms: [
-                        {x: 20, y: 370, width: 80, height: 20},
-                        {x: 150, y: 300, width: 80, height: 20},
-                        {x: 280, y: 230, width: 80, height: 20},
-                        {x: 410, y: 160, width: 80, height: 20}
+                        {x: 0.025, y: 0.74, w: 0.10},
+                        {x: 0.19, y: 0.60, w: 0.10},
+                        {x: 0.35, y: 0.46, w: 0.10},
+                        {x: 0.51, y: 0.32, w: 0.10}
                     ],
-                    grapes: [{x: 60, y: 340}, {x: 190, y: 270}, {x: 320, y: 200}, {x: 450, y: 130}, {x: 250, y: 400}, {x: 500, y: 400}]
+                    grapes: [{x: 0.07, y: 0.68}, {x: 0.24, y: 0.54}, {x: 0.40, y: 0.40}, {x: 0.56, y: 0.26}, {x: 0.31, y: 0.80}, {x: 0.62, y: 0.80}]
                 },
                 5: {
                     platforms: [
-                        {x: 30, y: 380, width: 80, height: 20},
-                        {x: 160, y: 310, width: 80, height: 20},
-                        {x: 290, y: 240, width: 80, height: 20},
-                        {x: 420, y: 170, width: 80, height: 20},
-                        {x: 290, y: 100, width: 80, height: 20}
+                        {x: 0.04, y: 0.76, w: 0.10},
+                        {x: 0.20, y: 0.62, w: 0.10},
+                        {x: 0.36, y: 0.48, w: 0.10},
+                        {x: 0.52, y: 0.34, w: 0.10},
+                        {x: 0.36, y: 0.20, w: 0.10}
                     ],
-                    grapes: [{x: 70, y: 350}, {x: 200, y: 280}, {x: 330, y: 210}, {x: 460, y: 140}, {x: 330, y: 70}, {x: 150, y: 400}, {x: 450, y: 400}]
+                    grapes: [{x: 0.09, y: 0.70}, {x: 0.25, y: 0.56}, {x: 0.41, y: 0.42}, {x: 0.57, y: 0.28}, {x: 0.41, y: 0.14}, {x: 0.19, y: 0.80}, {x: 0.56, y: 0.80}]
                 }
             };
 
             const config = configs[levelNum] || configs[5];
+            const platHeight = 20 * scaleY;
 
             config.platforms.forEach(p => {
-                platforms.push({x: p.x, y: p.y, width: p.width, height: p.height});
+                platforms.push({
+                    x: p.x * canvas.width,
+                    y: p.y * canvas.height,
+                    width: p.w * canvas.width,
+                    height: platHeight
+                });
             });
 
             config.grapes.forEach(g => {
-                grapes.push({x: g.x, y: g.y, size: 12, collected: false});
+                grapes.push({
+                    x: g.x * canvas.width,
+                    y: g.y * canvas.height,
+                    size: 12,
+                    collected: false
+                });
             });
 
             totalGrapes = grapes.length;
-            duck.x = 50;
-            duck.y = 350;
+            duck.x = canvas.width * 0.06;
+            duck.y = groundY - duck.height - 10;
             duck.vx = 0;
             duck.vy = 0;
+
+            // Update gravity based on screen height
+            gravity = 0.6 * scaleY;
         }
 
         function checkPlatformCollision() {
@@ -669,7 +718,7 @@
                     const dy = (duck.y + duck.height/2) - grape.y;
                     const dist = Math.sqrt(dx*dx + dy*dy);
 
-                    if (dist < 40) {
+                    if (dist < 40 * scale) {
                         grape.collected = true;
                         grapesCollected++;
                         totalGrapesCollected++;
@@ -728,11 +777,12 @@
 
             // Move toward target grape
             const dx = targetGrape.x - (duck.x + duck.width/2);
+            const threshold = 20 * scaleX;
 
-            if (dx > 20) {
+            if (dx > threshold) {
                 duck.vx = duck.speed * 0.8;
                 duck.facing = 1;
-            } else if (dx < -20) {
+            } else if (dx < -threshold) {
                 duck.vx = -duck.speed * 0.8;
                 duck.facing = -1;
             } else {
@@ -741,14 +791,13 @@
 
             // Jump logic
             demoJumpCooldown--;
-            const needsToJumpUp = targetGrape.y < duck.y - 30;
-            const nearPlatformEdge = duck.x < 50 || duck.x > canvas.width - 100;
+            const needsToJumpUp = targetGrape.y < duck.y - 30 * scaleY;
 
             // Check if there's a platform above we need to reach
             let platformAbove = false;
             for (const p of platforms) {
-                if (p.y < duck.y && p.y > duck.y - 150 &&
-                    duck.x + duck.width > p.x - 50 && duck.x < p.x + p.width + 50) {
+                if (p.y < duck.y && p.y > duck.y - 150 * scaleY &&
+                    duck.x + duck.width > p.x - 50 * scaleX && duck.x < p.x + p.width + 50 * scaleX) {
                     platformAbove = true;
                     break;
                 }
@@ -796,8 +845,9 @@
 
             // Fall off screen
             if (duck.y > canvas.height + 50) {
-                duck.x = 50;
-                duck.y = 350;
+                const groundY = canvas.height * 0.86;
+                duck.x = canvas.width * 0.06;
+                duck.y = groundY - duck.height - 10;
                 duck.vy = 0;
                 if (gameRunning) showMessage("Whoops! Try again!");
             }
@@ -827,7 +877,7 @@
                         const dx = (duck.x + duck.width/2) - grape.x;
                         const dy = (duck.y + duck.height/2) - grape.y;
                         const dist = Math.sqrt(dx*dx + dy*dy);
-                        if (dist < 40) {
+                        if (dist < 40 * scale) {
                             grape.collected = true;
                         }
                     }
@@ -842,13 +892,15 @@
 
             drawBackground();
 
-            // Platforms
+            const groundY = canvas.height * 0.86;
+
+            // Platforms (skip ground)
             for (const p of platforms) {
-                if (p.y < 430) drawPlatform(p);
+                if (p.y < groundY) drawPlatform(p);
             }
 
             // Lemonade stand
-            drawLemonadeStand(lemonadeStand.x, lemonadeStand.y);
+            drawLemonadeStand();
 
             // Grapes
             for (const grape of grapes) {
@@ -858,11 +910,14 @@
             // Duck
             drawDuck(duck.x, duck.y, duck.facing, duck.walkFrame);
 
-            // Speech bubble when near stand
-            if (duck.x > 500 && duck.x < 700 && duck.y > 350) {
+            // Speech bubble when near stand (right side of screen, lower area)
+            const standX = canvas.width * 0.75;
+            if (duck.x > standX - 100 * scale && duck.x < standX + 100 * scale && duck.y > canvas.height * 0.7) {
+                const bubbleX = standX + 40 * scale;
+                const bubbleY = canvas.height * 0.5;
                 ctx.fillStyle = 'white';
                 ctx.beginPath();
-                ctx.ellipse(680, 250, 70, 30, 0, 0, Math.PI * 2);
+                ctx.ellipse(bubbleX, bubbleY, 70 * scale, 30 * scale, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = '#000';
                 ctx.lineWidth = 2;
@@ -870,27 +925,29 @@
 
                 ctx.fillStyle = 'white';
                 ctx.beginPath();
-                ctx.moveTo(660, 275);
-                ctx.lineTo(670, 290);
-                ctx.lineTo(680, 275);
+                ctx.moveTo(bubbleX - 20 * scale, bubbleY + 25 * scale);
+                ctx.lineTo(bubbleX - 10 * scale, bubbleY + 40 * scale);
+                ctx.lineTo(bubbleX, bubbleY + 25 * scale);
                 ctx.fill();
                 ctx.stroke();
 
                 ctx.fillStyle = '#000';
-                ctx.font = 'bold 12px Comic Sans MS';
+                ctx.font = `bold ${12 * scale}px Comic Sans MS`;
                 ctx.textAlign = 'center';
-                ctx.fillText("We only sell", 680, 245);
-                ctx.fillText("LEMONADE!", 680, 260);
+                ctx.fillText("We only sell", bubbleX, bubbleY - 5 * scale);
+                ctx.fillText("LEMONADE!", bubbleX, bubbleY + 10 * scale);
             }
 
             // Message
             if (messageTimer > 0) {
+                const msgW = 400 * scaleX;
+                const msgH = 50 * scaleY;
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(200, 20, 400, 50);
+                ctx.fillRect((canvas.width - msgW) / 2, 20 * scaleY, msgW, msgH);
                 ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 24px Comic Sans MS';
+                ctx.font = `bold ${24 * scale}px Comic Sans MS`;
                 ctx.textAlign = 'center';
-                ctx.fillText(gameMessage, 400, 52);
+                ctx.fillText(gameMessage, canvas.width / 2, 20 * scaleY + msgH * 0.65);
             }
         }
 
@@ -1050,7 +1107,14 @@
         document.addEventListener('touchstart', initMotionOnce, { once: true });
         document.addEventListener('click', initMotionOnce, { once: true });
 
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            generateLevel(level); // Regenerate level for new dimensions
+        });
+
         // Initialize
+        resizeCanvas();
         generateLevel(1);
         gameLoop();
     </script>
