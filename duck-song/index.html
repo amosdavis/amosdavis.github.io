@@ -942,7 +942,7 @@
         const tiltMaxAngle = 25; // degrees at which full speed is reached
 
         function handleOrientation(e) {
-            if (!tiltEnabled) return;
+            if (!tiltEnabled || !gameRunning || demoMode) return;
 
             // gamma is left-right tilt (-90 to 90)
             let tilt = e.gamma || 0;
