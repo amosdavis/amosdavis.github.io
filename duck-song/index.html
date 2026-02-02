@@ -288,16 +288,11 @@
             }
         }
 
-        // Get background images for current level (4 backgrounds per level)
-        function getBackgroundsForLevel(levelNum) {
-            // Each level uses 4 consecutive backgrounds
-            const startIndex = ((levelNum - 1) * 4) % TOTAL_BG_SCENES;
-            return [
-                backgroundImages[startIndex],
-                backgroundImages[(startIndex + 1) % TOTAL_BG_SCENES],
-                backgroundImages[(startIndex + 2) % TOTAL_BG_SCENES],
-                backgroundImages[(startIndex + 3) % TOTAL_BG_SCENES]
-            ];
+        // Get single background for current level
+        function getBackgroundForLevel(levelNum) {
+            // Each level uses one background
+            const bgIndex = (levelNum - 1) % TOTAL_BG_SCENES;
+            return backgroundImages[bgIndex];
         }
 
         // Convert world coords to screen coords
@@ -693,35 +688,22 @@
                 return;
             }
 
-            // SVG dimensions
-            const svgWidth = 1900;
-            const svgHeight = 300;
+            // Get single background for current level
+            const levelBg = getBackgroundForLevel(level);
+            if (!levelBg) return;
 
-            // Scale SVG to fit from top of screen to ground level
+            // Scale background to cover the full screen width with some extra for parallax
             const bgHeight = groundY;
-            const bgScale = bgHeight / svgHeight;
-            const scaledWidth = svgWidth * bgScale;
+            const bgWidth = canvas.width * 1.3;  // Slightly wider for parallax movement
 
-            // Get backgrounds for current level (stays consistent throughout level)
-            const levelBackgrounds = getBackgroundsForLevel(level);
+            // Calculate parallax offset (subtle shift as camera moves)
+            const parallaxFactor = 0.1;
+            const maxOffset = bgWidth - canvas.width;
+            const progress = camera.x / (worldWidth - canvas.width);  // 0 to 1 progress through level
+            const offsetX = -progress * maxOffset * parallaxFactor;
 
-            // Calculate parallax offset (slower than camera for depth effect)
-            const parallaxFactor = 0.4;
-            const offset = camera.x * parallaxFactor;
-
-            // Determine tiling position
-            const startTileIndex = Math.floor(offset / scaledWidth);
-            const offsetInTile = offset % scaledWidth;
-
-            // Draw enough backgrounds to cover the screen (tile using level's backgrounds)
-            for (let i = -1; i <= Math.ceil(canvas.width / scaledWidth) + 1; i++) {
-                const tileIndex = ((startTileIndex + i) % 4 + 4) % 4;  // Cycle through 4 level backgrounds
-                const x = i * scaledWidth - offsetInTile;
-
-                if (levelBackgrounds[tileIndex]) {
-                    ctx.drawImage(levelBackgrounds[tileIndex], x, 0, scaledWidth, bgHeight);
-                }
-            }
+            // Draw single background stretched to cover screen
+            ctx.drawImage(levelBg, offsetX, 0, bgWidth, bgHeight);
 
             // Draw ground below the SVG backgrounds (the playable ground area)
             ctx.fillStyle = '#32CD32';  // Bright green grass
