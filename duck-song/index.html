@@ -43,19 +43,26 @@
             display: block;
             touch-action: none; /* prevent browser gestures interfering with game touches */
         }
-        /* Full screen mode for mobile */
-        @media (max-width: 900px) and (max-height: 600px), (max-aspect-ratio: 16/9) and (max-width: 900px) {
+        /* Full screen mode for mobile - detect touch devices */
+        @media (pointer: coarse), (max-width: 600px) {
+            html, body {
+                height: 100%;
+                height: -webkit-fill-available;
+            }
             #gameContainer {
                 padding: 0;
                 max-width: none;
+                height: 100%;
+                height: -webkit-fill-available;
             }
             #gameCanvas {
-                width: 100vw;
-                height: 100vh;
-                height: 100dvh;
+                width: 100%;
+                height: 100%;
                 max-width: none;
+                max-height: 100%;
                 border: none;
                 border-radius: 0;
+                object-fit: contain;
             }
             #title, #instructions {
                 display: none;
@@ -173,7 +180,7 @@
         <div id="startScreen">
             <h1 style="color: #FFD700; font-size: 36px;">The Duck Song Game</h1>
             <p style="margin: 20px 0; font-size: 18px;">Help the duck collect grapes!<br>Visit the lemonade stand along the way.</p>
-            <p style="color: #aaa;">Desktop: Arrow Keys / WASD + Space<br>Mobile: Tilt to move, Tap to jump!</p>
+            <p style="color: #aaa;">Desktop: Arrow Keys / WASD + Space<br>Mobile: Tilt to move, Tap to jump!<br><span style="font-size: 12px;">(Or tap left/right sides to move)</span></p>
             <button class="screen-btn" onclick="startGame()">Start Game!</button>
         </div>
 
@@ -758,10 +765,10 @@
 
             // Player input only when game is running (not demo)
             if (gameRunning && !demoMode) {
-                if (keys['ArrowLeft'] || keys['KeyA'] || keys['tiltLeft']) {
+                if (keys['ArrowLeft'] || keys['KeyA'] || keys['tiltLeft'] || keys['touchLeft']) {
                     duck.vx = -duck.speed * (keys['tiltLeft'] ? duck.tiltAmount : 1);
                     duck.facing = -1;
-                } else if (keys['ArrowRight'] || keys['KeyD'] || keys['tiltRight']) {
+                } else if (keys['ArrowRight'] || keys['KeyD'] || keys['tiltRight'] || keys['touchRight']) {
                     duck.vx = duck.speed * (keys['tiltRight'] ? duck.tiltAmount : 1);
                     duck.facing = 1;
                 } else {
@@ -922,27 +929,70 @@
             keys[e.code] = false;
         });
 
-        // Mobile touch controls - tap anywhere to jump
+        // Mobile touch controls - tap to jump, touch sides to move (fallback if no tilt)
+        let activeTouchId = null;
+
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            const touch = e.changedTouches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = (touch.clientX - rect.left) / rect.width;
+
+            // Tap to jump
             keys['touchJump'] = true;
+
+            // Fallback touch controls: left 30% = left, right 30% = right, middle = just jump
+            if (!tiltEnabled) {
+                activeTouchId = touch.identifier;
+                if (x < 0.3) {
+                    keys['touchLeft'] = true;
+                    keys['touchRight'] = false;
+                } else if (x > 0.7) {
+                    keys['touchRight'] = true;
+                    keys['touchLeft'] = false;
+                }
+            }
         }, { passive: false });
 
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
+            if (!tiltEnabled && activeTouchId !== null) {
+                for (const touch of e.changedTouches) {
+                    if (touch.identifier === activeTouchId) {
+                        const rect = canvas.getBoundingClientRect();
+                        const x = (touch.clientX - rect.left) / rect.width;
+                        if (x < 0.3) {
+                            keys['touchLeft'] = true;
+                            keys['touchRight'] = false;
+                        } else if (x > 0.7) {
+                            keys['touchRight'] = true;
+                            keys['touchLeft'] = false;
+                        } else {
+                            keys['touchLeft'] = false;
+                            keys['touchRight'] = false;
+                        }
+                    }
+                }
+            }
         }, { passive: false });
 
         canvas.addEventListener('touchend', (e) => {
-            // Nothing needed - jump is triggered on touchstart
+            for (const touch of e.changedTouches) {
+                if (touch.identifier === activeTouchId) {
+                    activeTouchId = null;
+                    keys['touchLeft'] = false;
+                    keys['touchRight'] = false;
+                }
+            }
         });
 
         // Tilt controls for movement (uses device orientation)
         let tiltEnabled = false;
-        const tiltDeadzone = 8; // degrees of deadzone before movement starts
-        const tiltMaxAngle = 25; // degrees at which full speed is reached
+        const tiltDeadzone = 5; // degrees of deadzone before movement starts
+        const tiltMaxAngle = 20; // degrees at which full speed is reached
 
         function handleOrientation(e) {
-            if (!tiltEnabled || !gameRunning || demoMode) return;
+            if (!gameRunning || demoMode) return;
 
             // gamma is left-right tilt (-90 to 90)
             let tilt = e.gamma || 0;
@@ -953,11 +1003,13 @@
                 keys['tiltRight'] = true;
                 keys['tiltLeft'] = false;
                 duck.tiltAmount = Math.min((tilt - tiltDeadzone) / (tiltMaxAngle - tiltDeadzone), 1);
+                duck.tiltAmount = Math.max(duck.tiltAmount, 0.4); // minimum speed when tilting
             } else if (tilt < -tiltDeadzone) {
                 // Tilted left
                 keys['tiltLeft'] = true;
                 keys['tiltRight'] = false;
                 duck.tiltAmount = Math.min((-tilt - tiltDeadzone) / (tiltMaxAngle - tiltDeadzone), 1);
+                duck.tiltAmount = Math.max(duck.tiltAmount, 0.4); // minimum speed when tilting
             } else {
                 keys['tiltLeft'] = false;
                 keys['tiltRight'] = false;
@@ -977,7 +1029,7 @@
                             tiltEnabled = true;
                         }
                     })
-                    .catch(console.error);
+                    .catch(err => console.log('Motion permission error:', err));
             } else if (window.DeviceOrientationEvent) {
                 // Non-iOS or older iOS - just add listener
                 window.addEventListener('deviceorientation', handleOrientation);
@@ -985,11 +1037,14 @@
             }
         }
 
-        // Request permission on first touch (required for iOS)
-        document.addEventListener('touchstart', function initMotion() {
+        // Request permission on first user interaction (required for iOS)
+        function initMotionOnce() {
             requestMotionPermission();
-            document.removeEventListener('touchstart', initMotion);
-        }, { once: true });
+            document.removeEventListener('touchstart', initMotionOnce);
+            document.removeEventListener('click', initMotionOnce);
+        }
+        document.addEventListener('touchstart', initMotionOnce, { once: true });
+        document.addEventListener('click', initMotionOnce, { once: true });
 
         // Initialize
         generateLevel(1);
