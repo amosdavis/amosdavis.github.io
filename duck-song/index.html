@@ -54,15 +54,19 @@
                 max-width: none;
                 height: 100%;
                 height: -webkit-fill-available;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: #000;
             }
             #gameCanvas {
-                width: 100%;
-                height: 100%;
-                max-width: none;
-                max-height: 100%;
+                /* Maintain 800:500 (8:5) aspect ratio */
+                width: min(100vw, calc(100vh * 8 / 5));
+                height: min(100vh, calc(100vw * 5 / 8));
+                max-width: 100vw;
+                max-height: 100vh;
                 border: none;
                 border-radius: 0;
-                object-fit: contain;
             }
             #title, #instructions {
                 display: none;
