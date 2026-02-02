@@ -288,12 +288,16 @@
             }
         }
 
-        // Get background image for a given world X position
-        function getBackgroundForPosition(worldX) {
-            // Cycle through backgrounds based on position
-            const bgWidth = 1900 * scale; // Each SVG is 1900px wide
-            const bgIndex = Math.floor((worldX / bgWidth) % TOTAL_BG_SCENES);
-            return backgroundImages[bgIndex] || backgroundImages[0];
+        // Get background images for current level (4 backgrounds per level)
+        function getBackgroundsForLevel(levelNum) {
+            // Each level uses 4 consecutive backgrounds
+            const startIndex = ((levelNum - 1) * 4) % TOTAL_BG_SCENES;
+            return [
+                backgroundImages[startIndex],
+                backgroundImages[(startIndex + 1) % TOTAL_BG_SCENES],
+                backgroundImages[(startIndex + 2) % TOTAL_BG_SCENES],
+                backgroundImages[(startIndex + 3) % TOTAL_BG_SCENES]
+            ];
         }
 
         // Convert world coords to screen coords
@@ -694,26 +698,28 @@
             const svgHeight = 300;
 
             // Scale SVG to fit from top of screen to ground level
-            // The SVG's hills (bottom ~30%) should sit at the ground line
             const bgHeight = groundY;
             const bgScale = bgHeight / svgHeight;
             const scaledWidth = svgWidth * bgScale;
+
+            // Get backgrounds for current level (stays consistent throughout level)
+            const levelBackgrounds = getBackgroundsForLevel(level);
 
             // Calculate parallax offset (slower than camera for depth effect)
             const parallaxFactor = 0.4;
             const offset = camera.x * parallaxFactor;
 
-            // Determine which backgrounds to draw (tile them)
-            const startBgIndex = Math.floor(offset / scaledWidth);
-            const offsetInBg = offset % scaledWidth;
+            // Determine tiling position
+            const startTileIndex = Math.floor(offset / scaledWidth);
+            const offsetInTile = offset % scaledWidth;
 
-            // Draw enough backgrounds to cover the screen
+            // Draw enough backgrounds to cover the screen (tile using level's backgrounds)
             for (let i = -1; i <= Math.ceil(canvas.width / scaledWidth) + 1; i++) {
-                const bgIndex = ((startBgIndex + i) % TOTAL_BG_SCENES + TOTAL_BG_SCENES) % TOTAL_BG_SCENES;
-                const x = i * scaledWidth - offsetInBg;
+                const tileIndex = ((startTileIndex + i) % 4 + 4) % 4;  // Cycle through 4 level backgrounds
+                const x = i * scaledWidth - offsetInTile;
 
-                if (backgroundImages[bgIndex]) {
-                    ctx.drawImage(backgroundImages[bgIndex], x, 0, scaledWidth, bgHeight);
+                if (levelBackgrounds[tileIndex]) {
+                    ctx.drawImage(levelBackgrounds[tileIndex], x, 0, scaledWidth, bgHeight);
                 }
             }
 
