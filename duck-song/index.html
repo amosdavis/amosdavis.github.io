@@ -14,14 +14,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            min-height: 100dvh; /* dynamic viewport height for mobile */
+            height: 100vh;
+            height: 100dvh; /* dynamic viewport height for mobile */
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             font-family: 'Comic Sans MS', cursive, sans-serif;
             overflow: hidden;
-            position: fixed;
             width: 100%;
-            height: 100%;
         }
         #gameContainer {
             position: relative; /* allow absolute children to center over the canvas */
@@ -39,14 +37,8 @@
             border: 4px solid #8B4513;
             border-radius: 8px;
             box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
-            max-width: 95vw;
-            max-height: calc(100vh - 120px);
-            max-height: calc(100dvh - 120px);
-            width: auto;
-            height: auto;
             display: block;
             touch-action: none; /* prevent browser gestures interfering with game touches */
-            object-fit: contain;
         }
         /* Full screen mode for mobile - detect touch devices */
         @media (pointer: coarse), (max-width: 600px) {
@@ -61,12 +53,12 @@
                 height: -webkit-fill-available;
             }
             #gameCanvas {
-                width: 100%;
-                height: 100%;
                 border: none;
                 border-radius: 0;
+                max-width: none;
+                max-height: none;
             }
-            #title, #instructions {
+            #title, #instructions, #fullscreenBtn {
                 display: none;
             }
             #ui {
@@ -255,10 +247,27 @@
         function resizeCanvas() {
             // Use visualViewport for accurate sizing on iOS Safari
             const vv = window.visualViewport;
-            const width = vv ? vv.width : window.innerWidth;
-            const height = vv ? vv.height : window.innerHeight;
+            const isMobile = window.matchMedia('(pointer: coarse), (max-width: 600px)').matches;
+
+            let width, height;
+            if (isMobile) {
+                // On mobile, use full viewport
+                width = Math.floor(vv ? vv.width : window.innerWidth);
+                height = Math.floor(vv ? vv.height : window.innerHeight);
+            } else {
+                // On desktop, fit within container with some room for UI
+                const container = document.getElementById('gameContainer');
+                width = Math.min(container.clientWidth - 20, 880);
+                height = Math.floor(window.innerHeight - 150);
+            }
+
+            // Set canvas internal resolution
             canvas.width = width;
             canvas.height = height;
+
+            // Set CSS display size to match exactly (prevents distortion)
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
 
             scaleX = canvas.width / REF_WIDTH;
             scaleY = canvas.height / REF_HEIGHT;
