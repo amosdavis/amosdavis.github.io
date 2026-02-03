@@ -1821,8 +1821,8 @@
             sceneryElements = [];
             grapesCollected = 0;
 
-            // World gets longer each level
-            worldWidth = (1500 + levelNum * 500) * scaleX;
+            // World gets longer each level - increased base width for better mobile experience
+            worldWidth = (2500 + levelNum * 600) * scaleX;
 
             const groundY = canvas.height * 0.86;
             const platHeight = 35 * scaleY; // Increased from 20 for better visibility
@@ -1848,11 +1848,27 @@
             const platformCount = 3 + levelNum * 2;
             const spacing = worldWidth / (platformCount + 1);
 
+            // Define lemonade stand area for level 1 (to avoid placing platforms over it)
+            const lemonadeStandX = 400 * scaleX;
+            const lemonadeStandWidth = 120 * scale; // Width of stand (matches drawing code)
+            const lemonadeStandLeft = lemonadeStandX - 60 * scale - 20 * scale; // Left edge with buffer
+            const lemonadeStandRight = lemonadeStandX + 60 * scale + 20 * scale; // Right edge with buffer
+
             for (let i = 0; i < platformCount; i++) {
-                const px = spacing * (i + 0.5 + Math.random() * 0.5);
+                let px = spacing * (i + 0.5 + Math.random() * 0.5);
                 const py = 0.45 + Math.random() * 0.25;  // Between 45% and 70% height
                 // Increase minimum and maximum width for better playability on mobile/iOS
                 const pw = 0.18 + Math.random() * 0.08;  // Platform width (increased for mobile)
+
+                // For level 1, ensure platforms don't overlap with lemonade stand
+                if (levelNum === 1) {
+                    const platformWidth = pw * canvas.width;
+                    // If platform would overlap with lemonade stand, shift it
+                    if (px < lemonadeStandRight && px + platformWidth > lemonadeStandLeft) {
+                        // Move platform to after the lemonade stand
+                        px = lemonadeStandRight + 50 * scaleX;
+                    }
+                }
 
                 platforms.push({
                     x: px,
