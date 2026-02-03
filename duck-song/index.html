@@ -1850,9 +1850,9 @@
 
             // Define lemonade stand area for level 1 (to avoid placing platforms over it)
             const lemonadeStandX = 400 * scaleX;
-            const lemonadeStandWidth = 150 * scale; // Width of stand with buffer
-            const lemonadeStandLeft = lemonadeStandX - 60 * scale;
-            const lemonadeStandRight = lemonadeStandX + 60 * scale + lemonadeStandWidth;
+            const lemonadeStandWidth = 120 * scale; // Width of stand (matches drawing code)
+            const lemonadeStandLeft = lemonadeStandX - 60 * scale - 20 * scale; // Left edge with buffer
+            const lemonadeStandRight = lemonadeStandX + 60 * scale + 20 * scale; // Right edge with buffer
 
             for (let i = 0; i < platformCount; i++) {
                 let px = spacing * (i + 0.5 + Math.random() * 0.5);
