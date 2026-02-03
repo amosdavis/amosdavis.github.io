@@ -271,7 +271,14 @@
 
             scaleX = canvas.width / REF_WIDTH;
             scaleY = canvas.height / REF_HEIGHT;
-            scale = Math.min(scaleX, scaleY); // uniform scale for sprites
+            
+            // On mobile, use height-based scaling to ensure elements are large enough
+            // On desktop, use minimum of both to maintain aspect ratio
+            if (isMobile) {
+                scale = Math.max(scaleX, scaleY * 0.85); // Prioritize making elements visible
+            } else {
+                scale = Math.min(scaleX, scaleY); // uniform scale for sprites
+            }
 
             // Update duck size based on scale
             duck.width = 50 * scale;
