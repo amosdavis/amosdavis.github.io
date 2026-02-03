@@ -173,6 +173,47 @@
         }
         .hidden { display: none !important; }
 
+        /* Mobile action buttons for helicopter and shooting */
+        #mobileControls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 200;
+        }
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.8);
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s, background 0.2s;
+            font-weight: bold;
+            touch-action: manipulation;
+        }
+        .mobile-btn:active {
+            transform: scale(0.9);
+            background: rgba(255,215,0,0.8);
+        }
+        .mobile-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        @media (pointer: coarse), (max-width: 600px) {
+            #mobileControls {
+                display: flex;
+            }
+        }
+
         /* Responsive tweaks */
         @media (max-width: 600px) {
             #title { font-size: 20px; }
@@ -198,6 +239,12 @@
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         <div id="instructions">
             WASD/Arrows: move | SPACE: jump | X/F: shoot (Lv5+) | E: helicopter (Lv6+)
+        </div>
+
+        <!-- Mobile action buttons -->
+        <div id="mobileControls">
+            <div id="helicopterBtn" class="mobile-btn disabled" title="Helicopter (Level 6+)" aria-label="Helicopter control" role="button">🚁</div>
+            <div id="shootBtn" class="mobile-btn disabled" title="Shoot (Level 5+)" aria-label="Shoot control" role="button">💥</div>
         </div>
 
         <div id="startScreen">
@@ -1071,12 +1118,6 @@
             ctx.scale(facing * scale, scale);
             ctx.translate(-25, -30); // center on reference duck size
 
-            // Shadow beneath duck
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.beginPath();
-            ctx.ellipse(25, 78, 28, 8, 0, 0, Math.PI * 2);
-            ctx.fill();
-
             // Tail feathers with gradient
             const tailGradient = ctx.createRadialGradient(-5, 35, 0, -5, 35, 15);
             tailGradient.addColorStop(0, '#F5C842');
@@ -1221,58 +1262,80 @@
             ctx.arc(38, 8, 0.6, 0, Math.PI * 2);
             ctx.fill();
 
-            // Legs with gradient
+            // Legs with gradient - improved waddling animation
             const legGradient = ctx.createLinearGradient(0, 60, 0, 72);
             legGradient.addColorStop(0, '#FFA726');
             legGradient.addColorStop(1, '#FF8C00');
             ctx.strokeStyle = legGradient;
             ctx.lineWidth = 3;
             ctx.lineCap = 'round';
-            const legOffset = Math.sin(walkFrame * 0.3) * 5;
+            
+            // More natural waddling motion - legs alternate more dramatically
+            // Left leg moves forward when sin is positive, right leg when negative
+            const waddle = walkFrame * 0.4; // Increased speed for more energetic motion
+            const leftLegOffset = Math.sin(waddle) * 8; // Increased amplitude
+            const rightLegOffset = Math.sin(waddle + Math.PI) * 8; // Opposite phase
+            const leftLegLift = Math.max(0, -Math.sin(waddle) * 3); // Lift leg when moving forward
+            const rightLegLift = Math.max(0, -Math.sin(waddle + Math.PI) * 3);
 
+            // Left leg
             ctx.beginPath();
             ctx.moveTo(18, 60);
-            ctx.lineTo(15 - legOffset, 72);
+            ctx.lineTo(15 + leftLegOffset, 72 - leftLegLift);
             ctx.stroke();
 
+            // Right leg
             ctx.beginPath();
             ctx.moveTo(32, 60);
-            ctx.lineTo(35 + legOffset, 72);
+            ctx.lineTo(35 + rightLegOffset, 72 - rightLegLift);
             ctx.stroke();
 
-            // Webbed feet with gradient
+            // Webbed feet with gradient - improved animation
             const footGradient = ctx.createLinearGradient(0, 72, 0, 74);
             footGradient.addColorStop(0, '#FF8C00');
             footGradient.addColorStop(1, '#E67E00');
             ctx.fillStyle = footGradient;
             ctx.lineWidth = 1.5;
             
-            // Left foot
+            // Calculate foot angles for more dynamic motion
+            const leftFootAngle = Math.sin(waddle) * 0.3; // Tilt foot forward/back
+            const rightFootAngle = Math.sin(waddle + Math.PI) * 0.3;
+            
+            // Left foot - with rotation
+            ctx.save();
+            ctx.translate(15 + leftLegOffset, 72 - leftLegLift);
+            ctx.rotate(leftFootAngle);
             ctx.beginPath();
-            ctx.moveTo(15 - legOffset, 72);
-            ctx.lineTo(5 - legOffset, 74);
-            ctx.lineTo(10 - legOffset, 72);
-            ctx.lineTo(15 - legOffset, 74);
-            ctx.lineTo(20 - legOffset, 72);
-            ctx.lineTo(25 - legOffset, 74);
-            ctx.lineTo(20 - legOffset, 72);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-10, 2);
+            ctx.lineTo(-5, 0);
+            ctx.lineTo(0, 2);
+            ctx.lineTo(5, 0);
+            ctx.lineTo(10, 2);
+            ctx.lineTo(5, 0);
             ctx.closePath();
             ctx.fill();
             ctx.strokeStyle = '#B8660A';
             ctx.stroke();
+            ctx.restore();
             
-            // Right foot
+            // Right foot - with rotation
+            ctx.save();
+            ctx.translate(35 + rightLegOffset, 72 - rightLegLift);
+            ctx.rotate(rightFootAngle);
             ctx.beginPath();
-            ctx.moveTo(35 + legOffset, 72);
-            ctx.lineTo(25 + legOffset, 74);
-            ctx.lineTo(30 + legOffset, 72);
-            ctx.lineTo(35 + legOffset, 74);
-            ctx.lineTo(40 + legOffset, 72);
-            ctx.lineTo(45 + legOffset, 74);
-            ctx.lineTo(40 + legOffset, 72);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-10, 2);
+            ctx.lineTo(-5, 0);
+            ctx.lineTo(0, 2);
+            ctx.lineTo(5, 0);
+            ctx.lineTo(10, 2);
+            ctx.lineTo(5, 0);
             ctx.closePath();
             ctx.fill();
+            ctx.strokeStyle = '#B8660A';
             ctx.stroke();
+            ctx.restore();
 
             // Lemon seed gun (if has gun)
             if (hasGun) {
@@ -1788,7 +1851,8 @@
             for (let i = 0; i < platformCount; i++) {
                 const px = spacing * (i + 0.5 + Math.random() * 0.5);
                 const py = 0.45 + Math.random() * 0.25;  // Between 45% and 70% height
-                const pw = 0.12 + Math.random() * 0.06;  // Platform width (increased for mobile)
+                // Increase minimum and maximum width for better playability on mobile/iOS
+                const pw = 0.18 + Math.random() * 0.08;  // Platform width (increased for mobile)
 
                 platforms.push({
                     x: px,
@@ -2709,6 +2773,7 @@
         function gameLoop() {
             update();
             draw();
+            updateMobileButtons(); // Update button states each frame
             requestAnimationFrame(gameLoop);
         }
 
@@ -2832,13 +2897,13 @@
                 keys['tiltRight'] = true;
                 keys['tiltLeft'] = false;
                 duck.tiltAmount = Math.min((tilt - adjustedDeadzone) / (adjustedMaxAngle - adjustedDeadzone), 1);
-                duck.tiltAmount = Math.max(duck.tiltAmount, 0.3 + tiltSensitivity * 0.4); // min speed scales with sensitivity
+                // Allow speed to vary from slow to fast based on tilt angle (removed artificial minimum)
             } else if (tilt < -adjustedDeadzone) {
                 // Tilted left
                 keys['tiltLeft'] = true;
                 keys['tiltRight'] = false;
                 duck.tiltAmount = Math.min((-tilt - adjustedDeadzone) / (adjustedMaxAngle - adjustedDeadzone), 1);
-                duck.tiltAmount = Math.max(duck.tiltAmount, 0.3 + tiltSensitivity * 0.4); // min speed scales with sensitivity
+                // Allow speed to vary from slow to fast based on tilt angle (removed artificial minimum)
             } else {
                 keys['tiltLeft'] = false;
                 keys['tiltRight'] = false;
@@ -2874,6 +2939,63 @@
         }
         document.addEventListener('touchstart', initMotionOnce, { once: true });
         document.addEventListener('click', initMotionOnce, { once: true });
+
+        // Mobile action button controls
+        const helicopterBtn = document.getElementById('helicopterBtn');
+        const shootBtn = document.getElementById('shootBtn');
+
+        // Helicopter button - toggle on/off
+        helicopterBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!helicopterBtn.classList.contains('disabled') && helicopter.available && helicopter.pickedUp) {
+                if (!keys['helicopterToggled']) {
+                    keys['helicopterToggled'] = true;
+                    helicopter.active = !helicopter.active;
+                    if (helicopter.active && helicopter.fuel > 0) {
+                        showMessage("Helicopter ON");
+                    } else {
+                        showMessage("Helicopter OFF");
+                    }
+                }
+            }
+        });
+        
+        helicopterBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys['helicopterToggled'] = false;
+        });
+
+        // Shoot button - press to shoot
+        shootBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!shootBtn.classList.contains('disabled') && level >= 5) {
+                keys['KeyX'] = true;
+            }
+        });
+        
+        shootBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys['KeyX'] = false;
+        });
+
+        // Update mobile button states based on game progress
+        function updateMobileButtons() {
+            // Shooting available from level 5
+            if (level >= 5 && gameRunning) {
+                shootBtn.classList.remove('disabled');
+            } else {
+                shootBtn.classList.add('disabled');
+            }
+            
+            // Helicopter available from level 6 and when picked up
+            if (level >= 6 && helicopter.available && helicopter.pickedUp && gameRunning) {
+                helicopterBtn.classList.remove('disabled');
+            } else {
+                helicopterBtn.classList.add('disabled');
+            }
+        }
 
         // Handle window resize
         window.addEventListener('resize', () => {
