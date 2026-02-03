@@ -593,9 +593,10 @@
                 const px = x + Math.cos(angle) * 5 * s;
                 const py = y - 15 * s + Math.sin(angle) * 5 * s;
                 
+                // Convert color to rgba for proper gradient
                 const petalGradient = ctx.createRadialGradient(px - s, py - s, 0, px, py, 4 * s);
                 petalGradient.addColorStop(0, petalColor);
-                petalGradient.addColorStop(1, petalColor + 'CC');
+                petalGradient.addColorStop(1, petalColor.startsWith('#') ? petalColor + 'CC' : 'rgba(255, 105, 180, 0.8)');
                 ctx.fillStyle = petalGradient;
                 ctx.beginPath();
                 ctx.arc(px, py, 4 * s, 0, Math.PI * 2);
@@ -1689,16 +1690,23 @@
             ctx.fillStyle = grassGradient;
             ctx.fillRect(p.x, p.y, p.width, 15 * scaleY);
 
-            // Grass blades with varied colors
+            // Grass blades with varied colors (deterministic pattern based on position)
             const grassColors = ['#228B22', '#2E7D32', '#1B5E20'];
+            let bladeIndex = 0;
             for (let i = p.x; i < p.x + p.width; i += 8 * scale) {
-                ctx.strokeStyle = grassColors[Math.floor(Math.random() * grassColors.length)];
+                // Use deterministic pattern based on position for consistent rendering
+                const colorIndex = Math.floor((i + p.y) * 0.1) % grassColors.length;
+                ctx.strokeStyle = grassColors[colorIndex];
                 ctx.lineWidth = 1.5;
-                const grassHeight = 4 + Math.random() * 3;
+                // Deterministic height based on position
+                const heightSeed = Math.sin(i * 0.1 + p.y * 0.05) * 0.5 + 0.5;
+                const grassHeight = 4 + heightSeed * 3;
+                const bendSeed = Math.cos(i * 0.15) * 0.5 + 0.5;
                 ctx.beginPath();
                 ctx.moveTo(i + 2 * scale, p.y);
-                ctx.lineTo(i + 3 * scale + Math.random() * 2 * scale, p.y - grassHeight * scaleY);
+                ctx.lineTo(i + 3 * scale + bendSeed * 2 * scale, p.y - grassHeight * scaleY);
                 ctx.stroke();
+                bladeIndex++;
             }
 
             // Platform edge highlights
