@@ -271,7 +271,19 @@
 
             scaleX = canvas.width / REF_WIDTH;
             scaleY = canvas.height / REF_HEIGHT;
-            scale = Math.min(scaleX, scaleY); // uniform scale for sprites
+            
+            // Mobile scale adjustment factor to prevent oversized elements on tall screens
+            const MOBILE_SCALE_FACTOR = 0.85;
+            
+            // On mobile, use height-based scaling to ensure elements are large enough
+            // On desktop, use minimum of both to maintain aspect ratio
+            if (isMobile) {
+                // Use max of width scale or adjusted height scale to ensure visibility
+                // while preventing elements from becoming too large on very tall screens
+                scale = Math.max(scaleX, scaleY * MOBILE_SCALE_FACTOR);
+            } else {
+                scale = Math.min(scaleX, scaleY); // uniform scale for sprites
+            }
 
             // Update duck size based on scale
             duck.width = 50 * scale;
@@ -298,6 +310,9 @@
         let messageTimer = 0;
         let musicPlaying = false;
         let levelCompleting = false;  // Prevent multiple level completions
+
+        // Particle system for visual effects
+        let particles = [];
 
         // Demo AI state
         let targetGrape = null;
@@ -467,60 +482,168 @@
         // Draw a tree (countryside)
         function drawTree(x, y, size) {
             const s = size * scale;
-            // Trunk
-            ctx.fillStyle = '#8B4513';
+            
+            // Trunk shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(x - 6 * s, y + 2 * s, 14 * s, 48 * s);
+            
+            // Trunk with gradient
+            const trunkGradient = ctx.createLinearGradient(x - 7 * s, y, x + 7 * s, y);
+            trunkGradient.addColorStop(0, '#6F3710');
+            trunkGradient.addColorStop(0.5, '#8B4513');
+            trunkGradient.addColorStop(1, '#6F3710');
+            ctx.fillStyle = trunkGradient;
             ctx.fillRect(x - 7 * s, y, 14 * s, 50 * s);
-            // Foliage
-            ctx.fillStyle = '#228B22';
+            
+            // Trunk texture
+            ctx.strokeStyle = 'rgba(60, 30, 10, 0.3)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(x - 5 * s, y + 15 * s + i * 12 * s);
+                ctx.lineTo(x + 5 * s, y + 15 * s + i * 12 * s);
+                ctx.stroke();
+            }
+            
+            // Foliage with gradient (back layer)
+            const foliageGradient1 = ctx.createRadialGradient(x, y - 10 * s, 0, x, y - 10 * s, 35 * s);
+            foliageGradient1.addColorStop(0, '#3CB371');
+            foliageGradient1.addColorStop(0.7, '#228B22');
+            foliageGradient1.addColorStop(1, '#1B5E20');
+            ctx.fillStyle = foliageGradient1;
             ctx.beginPath();
             ctx.arc(x, y - 10 * s, 35 * s, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Side foliage with gradients
+            const foliageGradient2 = ctx.createRadialGradient(x - 20 * s, y + 5 * s, 0, x - 20 * s, y + 5 * s, 25 * s);
+            foliageGradient2.addColorStop(0, '#3CB371');
+            foliageGradient2.addColorStop(0.7, '#228B22');
+            foliageGradient2.addColorStop(1, '#1B5E20');
+            ctx.fillStyle = foliageGradient2;
             ctx.beginPath();
             ctx.arc(x - 20 * s, y + 5 * s, 25 * s, 0, Math.PI * 2);
             ctx.fill();
+            
+            const foliageGradient3 = ctx.createRadialGradient(x + 20 * s, y + 5 * s, 0, x + 20 * s, y + 5 * s, 25 * s);
+            foliageGradient3.addColorStop(0, '#3CB371');
+            foliageGradient3.addColorStop(0.7, '#228B22');
+            foliageGradient3.addColorStop(1, '#1B5E20');
+            ctx.fillStyle = foliageGradient3;
             ctx.beginPath();
             ctx.arc(x + 20 * s, y + 5 * s, 25 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Foliage highlights
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.beginPath();
+            ctx.arc(x - 8 * s, y - 15 * s, 12 * s, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // Draw a shrub (small bush)
         function drawShrub(x, y, size) {
             const s = (size || 1) * scale;
-            ctx.fillStyle = '#2E8B57';
+            
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.beginPath();
+            ctx.arc(x, y, 16 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Main bush with gradient
+            const bushGradient = ctx.createRadialGradient(x - 3 * s, y - 10 * s, 0, x, y - 8 * s, 15 * s);
+            bushGradient.addColorStop(0, '#3CB371');
+            bushGradient.addColorStop(0.6, '#2E8B57');
+            bushGradient.addColorStop(1, '#1B5E20');
+            ctx.fillStyle = bushGradient;
             ctx.beginPath();
             ctx.arc(x, y - 8 * s, 15 * s, 0, Math.PI * 2);
             ctx.fill();
+            
             ctx.beginPath();
             ctx.arc(x - 10 * s, y - 3 * s, 10 * s, 0, Math.PI * 2);
             ctx.fill();
+            
             ctx.beginPath();
             ctx.arc(x + 10 * s, y - 3 * s, 10 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.beginPath();
+            ctx.arc(x - 3 * s, y - 10 * s, 6 * s, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // Draw a flower
         function drawFlower(x, y, color) {
             const s = scale;
-            // Stem
-            ctx.strokeStyle = '#228B22';
-            ctx.lineWidth = 2 * s;
+            
+            // Stem with gradient
+            const stemGradient = ctx.createLinearGradient(x, y, x, y - 15 * s);
+            stemGradient.addColorStop(0, '#1B5E20');
+            stemGradient.addColorStop(1, '#4CAF50');
+            ctx.strokeStyle = stemGradient;
+            ctx.lineWidth = 2.5 * s;
+            ctx.lineCap = 'round';
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(x, y - 15 * s);
             ctx.stroke();
-            // Petals
-            ctx.fillStyle = color || '#FF69B4';
+            
+            // Leaf
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.ellipse(x - 4 * s, y - 8 * s, 3 * s, 5 * s, -0.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Petals with gradient
+            const petalColor = color || '#FF69B4';
             for (let i = 0; i < 5; i++) {
                 const angle = (i / 5) * Math.PI * 2;
+                const px = x + Math.cos(angle) * 5 * s;
+                const py = y - 15 * s + Math.sin(angle) * 5 * s;
+                
+                // Convert color to rgba for proper gradient (safe for all color formats)
+                const petalGradient = ctx.createRadialGradient(px - s, py - s, 0, px, py, 4 * s);
+                petalGradient.addColorStop(0, petalColor);
+                // Use semi-transparent version for gradient end
+                if (petalColor.startsWith('#') && petalColor.length === 7) {
+                    petalGradient.addColorStop(1, petalColor + 'CC');
+                } else {
+                    // Fallback for named colors or other formats
+                    petalGradient.addColorStop(1, 'rgba(255, 105, 180, 0.8)');
+                }
+                ctx.fillStyle = petalGradient;
                 ctx.beginPath();
-                ctx.arc(x + Math.cos(angle) * 5 * s, y - 15 * s + Math.sin(angle) * 5 * s, 4 * s, 0, Math.PI * 2);
+                ctx.arc(px, py, 4 * s, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Petal highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.beginPath();
+                ctx.arc(px - s * 0.8, py - s * 0.8, 1.5 * s, 0, Math.PI * 2);
                 ctx.fill();
             }
-            // Center
-            ctx.fillStyle = '#FFD700';
+            
+            // Center with gradient
+            const centerGradient = ctx.createRadialGradient(x - s, y - 15 * s - s, 0, x, y - 15 * s, 3 * s);
+            centerGradient.addColorStop(0, '#FFD700');
+            centerGradient.addColorStop(1, '#FFA500');
+            ctx.fillStyle = centerGradient;
             ctx.beginPath();
             ctx.arc(x, y - 15 * s, 3 * s, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Center details (stamens)
+            ctx.fillStyle = '#FF8C00';
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(angle) * s, y - 15 * s + Math.sin(angle) * s, 0.5 * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // Draw a picket fence section
@@ -790,13 +913,38 @@
         // Draw cloud
         function drawCloud(x, y, size) {
             const s = size * scale;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            
+            // Cloud shadow (subtle)
+            ctx.fillStyle = 'rgba(200, 200, 220, 0.3)';
+            ctx.beginPath();
+            ctx.arc(x + 2 * s, y + 2 * s, 20 * s, 0, Math.PI * 2);
+            ctx.arc(x + 27 * s, y - 3 * s, 25 * s, 0, Math.PI * 2);
+            ctx.arc(x + 52 * s, y + 2 * s, 20 * s, 0, Math.PI * 2);
+            ctx.arc(x + 17 * s, y + 12 * s, 15 * s, 0, Math.PI * 2);
+            ctx.arc(x + 37 * s, y + 10 * s, 18 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Main cloud with soft gradient
+            const cloudGradient = ctx.createRadialGradient(x + 25 * s, y, 0, x + 25 * s, y, 50 * s);
+            cloudGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            cloudGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.95)');
+            cloudGradient.addColorStop(1, 'rgba(240, 240, 250, 0.85)');
+            ctx.fillStyle = cloudGradient;
             ctx.beginPath();
             ctx.arc(x, y, 20 * s, 0, Math.PI * 2);
             ctx.arc(x + 25 * s, y - 5 * s, 25 * s, 0, Math.PI * 2);
             ctx.arc(x + 50 * s, y, 20 * s, 0, Math.PI * 2);
             ctx.arc(x + 15 * s, y + 10 * s, 15 * s, 0, Math.PI * 2);
             ctx.arc(x + 35 * s, y + 8 * s, 18 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cloud highlights
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.arc(x + 20 * s, y - 8 * s, 10 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 45 * s, y - 3 * s, 8 * s, 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -813,20 +961,46 @@
             ctx.fillStyle = skyGradient;
             ctx.fillRect(0, 0, canvas.width, horizonY);
 
-            // Sun (with parallax)
+            // Sun (with parallax and glow)
             const parallaxOffset = camera.x * 0.1;
             const sunX = canvas.width * 0.85 - parallaxOffset * 0.3;
             const sunY = canvas.height * 0.12;
             const sunR = 35 * scale;
-            ctx.fillStyle = '#FFD700';
+            
+            // Sun glow (outer)
+            const sunGlowOuter = ctx.createRadialGradient(sunX, sunY, sunR * 0.5, sunX, sunY, sunR * 2.5);
+            sunGlowOuter.addColorStop(0, 'rgba(255, 223, 0, 0.3)');
+            sunGlowOuter.addColorStop(0.5, 'rgba(255, 215, 0, 0.15)');
+            sunGlowOuter.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            ctx.fillStyle = sunGlowOuter;
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, sunR * 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Sun body with gradient
+            const sunGradient = ctx.createRadialGradient(sunX - sunR * 0.3, sunY - sunR * 0.3, 0, sunX, sunY, sunR);
+            sunGradient.addColorStop(0, '#FFEB3B');
+            sunGradient.addColorStop(0.6, '#FFD700');
+            sunGradient.addColorStop(1, '#FFA500');
+            ctx.fillStyle = sunGradient;
             ctx.beginPath();
             ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
             ctx.fill();
 
+            // Sun rays
             for (let i = 0; i < 8; i++) {
                 const angle = (i / 8) * Math.PI * 2;
-                ctx.strokeStyle = '#FFD700';
-                ctx.lineWidth = 3 * scale;
+                const rayGradient = ctx.createLinearGradient(
+                    sunX + Math.cos(angle) * sunR * 1.15,
+                    sunY + Math.sin(angle) * sunR * 1.15,
+                    sunX + Math.cos(angle) * sunR * 1.6,
+                    sunY + Math.sin(angle) * sunR * 1.6
+                );
+                rayGradient.addColorStop(0, '#FFD700');
+                rayGradient.addColorStop(1, 'rgba(255, 215, 0, 0.3)');
+                ctx.strokeStyle = rayGradient;
+                ctx.lineWidth = 4 * scale;
+                ctx.lineCap = 'round';
                 ctx.beginPath();
                 ctx.moveTo(sunX + Math.cos(angle) * sunR * 1.15, sunY + Math.sin(angle) * sunR * 1.15);
                 ctx.lineTo(sunX + Math.cos(angle) * sunR * 1.6, sunY + Math.sin(angle) * sunR * 1.6);
@@ -897,8 +1071,17 @@
             ctx.scale(facing * scale, scale);
             ctx.translate(-25, -30); // center on reference duck size
 
-            // Tail feathers
-            ctx.fillStyle = '#E8A820';
+            // Shadow beneath duck
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(25, 78, 28, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tail feathers with gradient
+            const tailGradient = ctx.createRadialGradient(-5, 35, 0, -5, 35, 15);
+            tailGradient.addColorStop(0, '#F5C842');
+            tailGradient.addColorStop(1, '#D4A820');
+            ctx.fillStyle = tailGradient;
             ctx.beginPath();
             ctx.moveTo(-5, 35);
             ctx.quadraticCurveTo(-15, 25, -12, 38);
@@ -910,8 +1093,12 @@
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Body (yellow oval)
-            ctx.fillStyle = '#FFD83D';
+            // Body (yellow oval) with gradient
+            const bodyGradient = ctx.createRadialGradient(20, 30, 0, 25, 38, 30);
+            bodyGradient.addColorStop(0, '#FFF176');
+            bodyGradient.addColorStop(0.6, '#FFD83D');
+            bodyGradient.addColorStop(1, '#F5C842');
+            ctx.fillStyle = bodyGradient;
             ctx.beginPath();
             ctx.ellipse(25, 38, 24, 26, 0, 0, Math.PI * 2);
             ctx.fill();
@@ -919,17 +1106,38 @@
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Wing
-            ctx.fillStyle = '#E8C830';
+            // Body highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(20, 32, 12, 14, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Wing with gradient
+            const wingGradient = ctx.createRadialGradient(15, 35, 0, 20, 40, 18);
+            wingGradient.addColorStop(0, '#F5D86D');
+            wingGradient.addColorStop(1, '#D4A820');
+            ctx.fillStyle = wingGradient;
             ctx.beginPath();
             ctx.ellipse(20, 40, 14, 18, -0.2, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = '#D4A820';
+            ctx.strokeStyle = '#B8942E';
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Neck
-            ctx.fillStyle = '#FFD83D';
+            // Wing feather details
+            ctx.strokeStyle = 'rgba(180, 148, 46, 0.4)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.arc(20, 35 + i * 5, 10, 0.3, 1.5);
+                ctx.stroke();
+            }
+
+            // Neck with shading
+            const neckGradient = ctx.createLinearGradient(30, 20, 40, 35);
+            neckGradient.addColorStop(0, '#FFF176');
+            neckGradient.addColorStop(1, '#FFD83D');
+            ctx.fillStyle = neckGradient;
             ctx.beginPath();
             ctx.moveTo(35, 20);
             ctx.quadraticCurveTo(42, 25, 40, 35);
@@ -937,8 +1145,12 @@
             ctx.closePath();
             ctx.fill();
 
-            // Head
-            ctx.fillStyle = '#FFD83D';
+            // Head with gradient
+            const headGradient = ctx.createRadialGradient(28, 6, 0, 32, 10, 14);
+            headGradient.addColorStop(0, '#FFF9C4');
+            headGradient.addColorStop(0.5, '#FFD83D');
+            headGradient.addColorStop(1, '#F5C842');
+            ctx.fillStyle = headGradient;
             ctx.beginPath();
             ctx.arc(32, 10, 14, 0, Math.PI * 2);
             ctx.fill();
@@ -946,8 +1158,12 @@
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Beak (flat duck bill)
-            ctx.fillStyle = '#FF8C00';
+            // Beak (flat duck bill) with gradient
+            const beakGradient = ctx.createLinearGradient(44, 8, 60, 12);
+            beakGradient.addColorStop(0, '#FFA726');
+            beakGradient.addColorStop(0.5, '#FF8C00');
+            beakGradient.addColorStop(1, '#E67E00');
+            ctx.fillStyle = beakGradient;
             ctx.beginPath();
             ctx.moveTo(44, 8);
             ctx.quadraticCurveTo(58, 6, 60, 12);
@@ -958,14 +1174,27 @@
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 1.5;
             ctx.stroke();
+            
+            // Beak highlight
+            ctx.fillStyle = 'rgba(255, 200, 100, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(46, 9);
+            ctx.quadraticCurveTo(52, 8, 54, 10);
+            ctx.quadraticCurveTo(52, 11, 46, 11);
+            ctx.closePath();
+            ctx.fill();
+            
             // Nostril
             ctx.fillStyle = '#CC6600';
             ctx.beginPath();
             ctx.ellipse(50, 11, 2, 1.5, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Eye (white with black pupil)
-            ctx.fillStyle = 'white';
+            // Eye white with subtle gradient
+            const eyeWhiteGradient = ctx.createRadialGradient(37, 6, 0, 38, 7, 6);
+            eyeWhiteGradient.addColorStop(0, '#FFFFFF');
+            eyeWhiteGradient.addColorStop(1, '#F0F0F0');
+            ctx.fillStyle = eyeWhiteGradient;
             ctx.beginPath();
             ctx.ellipse(38, 7, 5, 6, 0, 0, Math.PI * 2);
             ctx.fill();
@@ -973,20 +1202,32 @@
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Pupil
-            ctx.fillStyle = 'black';
+            // Pupil with depth
+            const pupilGradient = ctx.createRadialGradient(38.5, 6.5, 0, 39, 7, 2.5);
+            pupilGradient.addColorStop(0, '#333');
+            pupilGradient.addColorStop(1, '#000');
+            ctx.fillStyle = pupilGradient;
             ctx.beginPath();
             ctx.arc(39, 7, 2.5, 0, Math.PI * 2);
             ctx.fill();
-            // Eye highlight
-            ctx.fillStyle = 'white';
+            
+            // Eye highlights (two for more life)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
             ctx.beginPath();
-            ctx.arc(40, 5.5, 1, 0, Math.PI * 2);
+            ctx.arc(40, 5.5, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.arc(38, 8, 0.6, 0, Math.PI * 2);
             ctx.fill();
 
-            // Legs
-            ctx.strokeStyle = '#FF8C00';
+            // Legs with gradient
+            const legGradient = ctx.createLinearGradient(0, 60, 0, 72);
+            legGradient.addColorStop(0, '#FFA726');
+            legGradient.addColorStop(1, '#FF8C00');
+            ctx.strokeStyle = legGradient;
             ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
             const legOffset = Math.sin(walkFrame * 0.3) * 5;
 
             ctx.beginPath();
@@ -999,8 +1240,13 @@
             ctx.lineTo(35 + legOffset, 72);
             ctx.stroke();
 
-            // Webbed feet
-            ctx.fillStyle = '#FF8C00';
+            // Webbed feet with gradient
+            const footGradient = ctx.createLinearGradient(0, 72, 0, 74);
+            footGradient.addColorStop(0, '#FF8C00');
+            footGradient.addColorStop(1, '#E67E00');
+            ctx.fillStyle = footGradient;
+            ctx.lineWidth = 1.5;
+            
             // Left foot
             ctx.beginPath();
             ctx.moveTo(15 - legOffset, 72);
@@ -1012,7 +1258,9 @@
             ctx.lineTo(20 - legOffset, 72);
             ctx.closePath();
             ctx.fill();
+            ctx.strokeStyle = '#B8660A';
             ctx.stroke();
+            
             // Right foot
             ctx.beginPath();
             ctx.moveTo(35 + legOffset, 72);
@@ -1069,20 +1317,34 @@
         // Draw a grape bunch (scaled)
         function drawGrape(x, y, size) {
             const s = size * scale;
-            const grapeColor = '#8B008B';
-            const highlight = '#9932CC';
 
-            ctx.strokeStyle = '#228B22';
-            ctx.lineWidth = 2;
+            // Stem with gradient
+            const stemGradient = ctx.createLinearGradient(x, y - s - 10 * scale, x, y - s);
+            stemGradient.addColorStop(0, '#2E7D32');
+            stemGradient.addColorStop(1, '#228B22');
+            ctx.strokeStyle = stemGradient;
+            ctx.lineWidth = 2.5 * scale;
+            ctx.lineCap = 'round';
             ctx.beginPath();
             ctx.moveTo(x, y - s);
             ctx.lineTo(x, y - s - 10 * scale);
             ctx.stroke();
 
-            ctx.fillStyle = '#228B22';
+            // Leaf with gradient
+            const leafGradient = ctx.createRadialGradient(x + 5 * scale, y - s - 8 * scale, 0, x + 5 * scale, y - s - 8 * scale, 8 * scale);
+            leafGradient.addColorStop(0, '#4CAF50');
+            leafGradient.addColorStop(1, '#2E7D32');
+            ctx.fillStyle = leafGradient;
             ctx.beginPath();
             ctx.ellipse(x + 5 * scale, y - s - 8 * scale, 8 * scale, 4 * scale, 0.3, 0, Math.PI * 2);
             ctx.fill();
+            // Leaf vein
+            ctx.strokeStyle = '#1B5E20';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + 2 * scale, y - s - 8 * scale);
+            ctx.lineTo(x + 8 * scale, y - s - 8 * scale);
+            ctx.stroke();
 
             const positions = [
                 {dx: 0, dy: 0},
@@ -1094,17 +1356,50 @@
             ];
 
             positions.forEach(pos => {
-                ctx.fillStyle = grapeColor;
+                const gx = x + pos.dx;
+                const gy = y + pos.dy;
+                
+                // Grape shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
                 ctx.beginPath();
-                ctx.arc(x + pos.dx, y + pos.dy, s * 0.5, 0, Math.PI * 2);
+                ctx.arc(gx + s * 0.1, gy + s * 0.15, s * 0.48, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Grape body with radial gradient
+                const grapeGradient = ctx.createRadialGradient(
+                    gx - s * 0.15, gy - s * 0.15, 0,
+                    gx, gy, s * 0.5
+                );
+                grapeGradient.addColorStop(0, '#BA68C8');
+                grapeGradient.addColorStop(0.5, '#8B008B');
+                grapeGradient.addColorStop(1, '#6A0080');
+                ctx.fillStyle = grapeGradient;
+                ctx.beginPath();
+                ctx.arc(gx, gy, s * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Grape outline
                 ctx.strokeStyle = '#4B0082';
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 1.5 * scale;
                 ctx.stroke();
 
-                ctx.fillStyle = highlight;
+                // Main highlight (glossy effect)
+                const highlightGradient = ctx.createRadialGradient(
+                    gx - s * 0.2, gy - s * 0.2, 0,
+                    gx - s * 0.2, gy - s * 0.2, s * 0.25
+                );
+                highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+                highlightGradient.addColorStop(0.5, 'rgba(204, 153, 255, 0.4)');
+                highlightGradient.addColorStop(1, 'rgba(204, 153, 255, 0)');
+                ctx.fillStyle = highlightGradient;
                 ctx.beginPath();
-                ctx.arc(x + pos.dx - 2 * scale, y + pos.dy - 2 * scale, s * 0.15, 0, Math.PI * 2);
+                ctx.arc(gx - s * 0.2, gy - s * 0.2, s * 0.25, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Secondary highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(gx - s * 0.25, gy - s * 0.25, s * 0.12, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
@@ -1120,6 +1415,90 @@
             ctx.stroke();
         }
 
+        // ========================================
+        // PARTICLE SYSTEM
+        // ========================================
+        
+        function createParticles(x, y, count, type) {
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+                const speed = 2 + Math.random() * 3;
+                
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 1,
+                    life: 1.0,
+                    decay: 0.02 + Math.random() * 0.01,
+                    size: 3 + Math.random() * 3,
+                    type: type,
+                    color: type === 'grape' ? '#8B008B' : '#FFD700'
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.15; // gravity
+                p.life -= p.decay;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawParticles() {
+            for (const p of particles) {
+                const screenX = p.x - camera.x;
+                if (screenX < -20 || screenX > canvas.width + 20) continue;
+                
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                
+                if (p.type === 'grape') {
+                    // Sparkle particles for grapes
+                    const gradient = ctx.createRadialGradient(screenX, p.y, 0, screenX, p.y, p.size * scale);
+                    gradient.addColorStop(0, '#DA70D6');
+                    gradient.addColorStop(0.5, '#8B008B');
+                    gradient.addColorStop(1, 'rgba(139, 0, 139, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(screenX, p.y, p.size * scale, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Star shape
+                    ctx.fillStyle = '#FFF';
+                    ctx.beginPath();
+                    for (let i = 0; i < 5; i++) {
+                        const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+                        const x = screenX + Math.cos(angle) * p.size * scale * 0.5;
+                        const y = p.y + Math.sin(angle) * p.size * scale * 0.5;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Simple colored particles
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(screenX, p.y, p.size * scale, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        // ========================================
+        // ENEMY DRAWING
+        // ========================================
+        
         // Draw enemy based on type
         function drawEnemy(enemy, screenX) {
             const x = screenX;
@@ -1298,24 +1677,78 @@
 
         // Draw platforms (already in screen coords)
         function drawPlatform(p) {
-            ctx.fillStyle = '#8B4513';
+            // Platform shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(p.x + 3 * scale, p.y + 3 * scaleY, p.width, p.height);
+
+            // Wood section with gradient
+            const woodGradient = ctx.createLinearGradient(p.x, p.y + 10 * scaleY, p.x, p.y + p.height);
+            woodGradient.addColorStop(0, '#A0643C');
+            woodGradient.addColorStop(0.5, '#8B4513');
+            woodGradient.addColorStop(1, '#6F3710');
+            ctx.fillStyle = woodGradient;
             ctx.fillRect(p.x, p.y + 10 * scaleY, p.width, p.height - 10 * scaleY);
 
-            ctx.fillStyle = '#32CD32';
-            ctx.fillRect(p.x, p.y, p.width, 15 * scaleY);
-
-            ctx.strokeStyle = '#228B22';
+            // Wood grain texture
+            ctx.strokeStyle = 'rgba(101, 67, 33, 0.3)';
             ctx.lineWidth = 1;
-            for (let i = p.x; i < p.x + p.width; i += 10 * scale) {
+            for (let i = 0; i < 3; i++) {
+                const yPos = p.y + 15 * scaleY + i * 8 * scaleY;
                 ctx.beginPath();
-                ctx.moveTo(i + 2 * scale, p.y);
-                ctx.lineTo(i + 4 * scale, p.y - 5 * scaleY);
+                ctx.moveTo(p.x, yPos);
+                ctx.lineTo(p.x + p.width, yPos);
                 ctx.stroke();
             }
 
+            // Grass section with gradient
+            const grassGradient = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 15 * scaleY);
+            grassGradient.addColorStop(0, '#4CAF50');
+            grassGradient.addColorStop(0.5, '#32CD32');
+            grassGradient.addColorStop(1, '#2E7D32');
+            ctx.fillStyle = grassGradient;
+            ctx.fillRect(p.x, p.y, p.width, 15 * scaleY);
+
+            // Grass blades with varied colors (deterministic pattern based on position)
+            const grassColors = ['#228B22', '#2E7D32', '#1B5E20'];
+            const GRASS_COLOR_VARIATION = 0.1; // Factor for color pattern variation
+            const GRASS_HEIGHT_VARIATION = 0.1; // Factor for height pattern variation
+            const GRASS_BEND_VARIATION = 0.15; // Factor for blade bend pattern
+            
+            for (let i = p.x; i < p.x + p.width; i += 8 * scale) {
+                // Use deterministic pattern based on position for consistent rendering
+                const colorIndex = Math.floor((i + p.y) * GRASS_COLOR_VARIATION) % grassColors.length;
+                ctx.strokeStyle = grassColors[colorIndex];
+                ctx.lineWidth = 1.5;
+                // Deterministic height based on position
+                const heightSeed = Math.sin(i * GRASS_HEIGHT_VARIATION + p.y * 0.05) * 0.5 + 0.5;
+                const grassHeight = 4 + heightSeed * 3;
+                const bendSeed = Math.cos(i * GRASS_BEND_VARIATION) * 0.5 + 0.5;
+                ctx.beginPath();
+                ctx.moveTo(i + 2 * scale, p.y);
+                ctx.lineTo(i + 3 * scale + bendSeed * 2 * scale, p.y - grassHeight * scaleY);
+                ctx.stroke();
+            }
+
+            // Platform edge highlights
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y + 1 * scaleY);
+            ctx.lineTo(p.x + p.width, p.y + 1 * scaleY);
+            ctx.stroke();
+
+            // Platform outline
             ctx.strokeStyle = '#5D2E0C';
             ctx.lineWidth = 2;
             ctx.strokeRect(p.x, p.y, p.width, p.height);
+
+            // Darker bottom edge
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y + p.height);
+            ctx.lineTo(p.x + p.width, p.y + p.height);
+            ctx.stroke();
         }
 
         // Generate scrolling level with scenery
@@ -1329,7 +1762,7 @@
             worldWidth = (1500 + levelNum * 500) * scaleX;
 
             const groundY = canvas.height * 0.86;
-            const platHeight = 20 * scaleY;
+            const platHeight = 35 * scaleY; // Increased from 20 for better visibility
 
             // Ground platform spans entire world
             platforms.push({x: 0, y: groundY, width: worldWidth, height: canvas.height - groundY, isGround: true});
@@ -1355,7 +1788,7 @@
             for (let i = 0; i < platformCount; i++) {
                 const px = spacing * (i + 0.5 + Math.random() * 0.5);
                 const py = 0.45 + Math.random() * 0.25;  // Between 45% and 70% height
-                const pw = 0.08 + Math.random() * 0.05;  // Platform width
+                const pw = 0.12 + Math.random() * 0.06;  // Platform width (increased for mobile)
 
                 platforms.push({
                     x: px,
@@ -1574,6 +2007,9 @@
                         grapesCollected++;
                         totalGrapesCollected++;
                         showMessage("Got a grape!");
+                        
+                        // Create particle effect
+                        createParticles(grape.x, grape.y, 15, 'grape');
 
                         // Check if all grapes collected - prompt to reach end
                         if (grapesCollected === totalGrapes) {
@@ -1890,6 +2326,9 @@
             }
 
             if (messageTimer > 0) messageTimer--;
+            
+            // Update particles
+            updateParticles();
         }
 
         function draw() {
@@ -2074,6 +2513,9 @@
                     ctx.fillText('FINISH!', arrowX, arrowY + 35 * scale);
                 }
             }
+
+            // Particles (draw after characters but before UI)
+            drawParticles();
 
             // Message
             if (messageTimer > 0) {
