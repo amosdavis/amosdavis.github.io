@@ -272,10 +272,15 @@
             scaleX = canvas.width / REF_WIDTH;
             scaleY = canvas.height / REF_HEIGHT;
             
+            // Mobile scale adjustment factor to prevent oversized elements on tall screens
+            const MOBILE_SCALE_FACTOR = 0.85;
+            
             // On mobile, use height-based scaling to ensure elements are large enough
             // On desktop, use minimum of both to maintain aspect ratio
             if (isMobile) {
-                scale = Math.max(scaleX, scaleY * 0.85); // Prioritize making elements visible
+                // Use max of width scale or adjusted height scale to ensure visibility
+                // while preventing elements from becoming too large on very tall screens
+                scale = Math.max(scaleX, scaleY * MOBILE_SCALE_FACTOR);
             } else {
                 scale = Math.min(scaleX, scaleY); // uniform scale for sprites
             }
