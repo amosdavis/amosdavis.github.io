@@ -593,10 +593,16 @@
                 const px = x + Math.cos(angle) * 5 * s;
                 const py = y - 15 * s + Math.sin(angle) * 5 * s;
                 
-                // Convert color to rgba for proper gradient
+                // Convert color to rgba for proper gradient (safe for all color formats)
                 const petalGradient = ctx.createRadialGradient(px - s, py - s, 0, px, py, 4 * s);
                 petalGradient.addColorStop(0, petalColor);
-                petalGradient.addColorStop(1, petalColor.startsWith('#') ? petalColor + 'CC' : 'rgba(255, 105, 180, 0.8)');
+                // Use semi-transparent version for gradient end
+                if (petalColor.startsWith('#') && petalColor.length === 7) {
+                    petalGradient.addColorStop(1, petalColor + 'CC');
+                } else {
+                    // Fallback for named colors or other formats
+                    petalGradient.addColorStop(1, 'rgba(255, 105, 180, 0.8)');
+                }
                 ctx.fillStyle = petalGradient;
                 ctx.beginPath();
                 ctx.arc(px, py, 4 * s, 0, Math.PI * 2);
@@ -1692,21 +1698,23 @@
 
             // Grass blades with varied colors (deterministic pattern based on position)
             const grassColors = ['#228B22', '#2E7D32', '#1B5E20'];
-            let bladeIndex = 0;
+            const GRASS_COLOR_VARIATION = 0.1; // Factor for color pattern variation
+            const GRASS_HEIGHT_VARIATION = 0.1; // Factor for height pattern variation
+            const GRASS_BEND_VARIATION = 0.15; // Factor for blade bend pattern
+            
             for (let i = p.x; i < p.x + p.width; i += 8 * scale) {
                 // Use deterministic pattern based on position for consistent rendering
-                const colorIndex = Math.floor((i + p.y) * 0.1) % grassColors.length;
+                const colorIndex = Math.floor((i + p.y) * GRASS_COLOR_VARIATION) % grassColors.length;
                 ctx.strokeStyle = grassColors[colorIndex];
                 ctx.lineWidth = 1.5;
                 // Deterministic height based on position
-                const heightSeed = Math.sin(i * 0.1 + p.y * 0.05) * 0.5 + 0.5;
+                const heightSeed = Math.sin(i * GRASS_HEIGHT_VARIATION + p.y * 0.05) * 0.5 + 0.5;
                 const grassHeight = 4 + heightSeed * 3;
-                const bendSeed = Math.cos(i * 0.15) * 0.5 + 0.5;
+                const bendSeed = Math.cos(i * GRASS_BEND_VARIATION) * 0.5 + 0.5;
                 ctx.beginPath();
                 ctx.moveTo(i + 2 * scale, p.y);
                 ctx.lineTo(i + 3 * scale + bendSeed * 2 * scale, p.y - grassHeight * scaleY);
                 ctx.stroke();
-                bladeIndex++;
             }
 
             // Platform edge highlights
