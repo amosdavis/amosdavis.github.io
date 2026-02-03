@@ -1762,7 +1762,7 @@
             worldWidth = (1500 + levelNum * 500) * scaleX;
 
             const groundY = canvas.height * 0.86;
-            const platHeight = 20 * scaleY;
+            const platHeight = 35 * scaleY; // Increased from 20 for better visibility
 
             // Ground platform spans entire world
             platforms.push({x: 0, y: groundY, width: worldWidth, height: canvas.height - groundY, isGround: true});
