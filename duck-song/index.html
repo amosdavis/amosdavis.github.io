@@ -253,9 +253,12 @@
 
         // Resize canvas to fill screen
         function resizeCanvas() {
-            const container = document.getElementById('gameContainer');
-            canvas.width = container.clientWidth || window.innerWidth;
-            canvas.height = container.clientHeight || window.innerHeight;
+            // Use visualViewport for accurate sizing on iOS Safari
+            const vv = window.visualViewport;
+            const width = vv ? vv.width : window.innerWidth;
+            const height = vv ? vv.height : window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
 
             scaleX = canvas.width / REF_WIDTH;
             scaleY = canvas.height / REF_HEIGHT;
@@ -2426,6 +2429,13 @@
             resizeCanvas();
             generateLevel(level); // Regenerate level for new dimensions
         });
+
+        // Handle iOS Safari viewport changes (address bar show/hide)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                resizeCanvas();
+            });
+        }
 
         // Initialize
         resizeCanvas();
