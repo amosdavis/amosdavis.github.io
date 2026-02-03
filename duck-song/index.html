@@ -2897,13 +2897,13 @@
                 keys['tiltRight'] = true;
                 keys['tiltLeft'] = false;
                 duck.tiltAmount = Math.min((tilt - adjustedDeadzone) / (adjustedMaxAngle - adjustedDeadzone), 1);
-                duck.tiltAmount = Math.max(duck.tiltAmount, 0.3 + tiltSensitivity * 0.4); // min speed scales with sensitivity
+                // Allow speed to vary from slow to fast based on tilt angle (removed artificial minimum)
             } else if (tilt < -adjustedDeadzone) {
                 // Tilted left
                 keys['tiltLeft'] = true;
                 keys['tiltRight'] = false;
                 duck.tiltAmount = Math.min((-tilt - adjustedDeadzone) / (adjustedMaxAngle - adjustedDeadzone), 1);
-                duck.tiltAmount = Math.max(duck.tiltAmount, 0.3 + tiltSensitivity * 0.4); // min speed scales with sensitivity
+                // Allow speed to vary from slow to fast based on tilt angle (removed artificial minimum)
             } else {
                 keys['tiltLeft'] = false;
                 keys['tiltRight'] = false;
