@@ -470,60 +470,161 @@
         // Draw a tree (countryside)
         function drawTree(x, y, size) {
             const s = size * scale;
-            // Trunk
-            ctx.fillStyle = '#8B4513';
+            
+            // Trunk shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(x - 6 * s, y + 2 * s, 14 * s, 48 * s);
+            
+            // Trunk with gradient
+            const trunkGradient = ctx.createLinearGradient(x - 7 * s, y, x + 7 * s, y);
+            trunkGradient.addColorStop(0, '#6F3710');
+            trunkGradient.addColorStop(0.5, '#8B4513');
+            trunkGradient.addColorStop(1, '#6F3710');
+            ctx.fillStyle = trunkGradient;
             ctx.fillRect(x - 7 * s, y, 14 * s, 50 * s);
-            // Foliage
-            ctx.fillStyle = '#228B22';
+            
+            // Trunk texture
+            ctx.strokeStyle = 'rgba(60, 30, 10, 0.3)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(x - 5 * s, y + 15 * s + i * 12 * s);
+                ctx.lineTo(x + 5 * s, y + 15 * s + i * 12 * s);
+                ctx.stroke();
+            }
+            
+            // Foliage with gradient (back layer)
+            const foliageGradient1 = ctx.createRadialGradient(x, y - 10 * s, 0, x, y - 10 * s, 35 * s);
+            foliageGradient1.addColorStop(0, '#3CB371');
+            foliageGradient1.addColorStop(0.7, '#228B22');
+            foliageGradient1.addColorStop(1, '#1B5E20');
+            ctx.fillStyle = foliageGradient1;
             ctx.beginPath();
             ctx.arc(x, y - 10 * s, 35 * s, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Side foliage with gradients
+            const foliageGradient2 = ctx.createRadialGradient(x - 20 * s, y + 5 * s, 0, x - 20 * s, y + 5 * s, 25 * s);
+            foliageGradient2.addColorStop(0, '#3CB371');
+            foliageGradient2.addColorStop(0.7, '#228B22');
+            foliageGradient2.addColorStop(1, '#1B5E20');
+            ctx.fillStyle = foliageGradient2;
             ctx.beginPath();
             ctx.arc(x - 20 * s, y + 5 * s, 25 * s, 0, Math.PI * 2);
             ctx.fill();
+            
+            const foliageGradient3 = ctx.createRadialGradient(x + 20 * s, y + 5 * s, 0, x + 20 * s, y + 5 * s, 25 * s);
+            foliageGradient3.addColorStop(0, '#3CB371');
+            foliageGradient3.addColorStop(0.7, '#228B22');
+            foliageGradient3.addColorStop(1, '#1B5E20');
+            ctx.fillStyle = foliageGradient3;
             ctx.beginPath();
             ctx.arc(x + 20 * s, y + 5 * s, 25 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Foliage highlights
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.beginPath();
+            ctx.arc(x - 8 * s, y - 15 * s, 12 * s, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // Draw a shrub (small bush)
         function drawShrub(x, y, size) {
             const s = (size || 1) * scale;
-            ctx.fillStyle = '#2E8B57';
+            
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.beginPath();
+            ctx.arc(x, y, 16 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Main bush with gradient
+            const bushGradient = ctx.createRadialGradient(x - 3 * s, y - 10 * s, 0, x, y - 8 * s, 15 * s);
+            bushGradient.addColorStop(0, '#3CB371');
+            bushGradient.addColorStop(0.6, '#2E8B57');
+            bushGradient.addColorStop(1, '#1B5E20');
+            ctx.fillStyle = bushGradient;
             ctx.beginPath();
             ctx.arc(x, y - 8 * s, 15 * s, 0, Math.PI * 2);
             ctx.fill();
+            
             ctx.beginPath();
             ctx.arc(x - 10 * s, y - 3 * s, 10 * s, 0, Math.PI * 2);
             ctx.fill();
+            
             ctx.beginPath();
             ctx.arc(x + 10 * s, y - 3 * s, 10 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.beginPath();
+            ctx.arc(x - 3 * s, y - 10 * s, 6 * s, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // Draw a flower
         function drawFlower(x, y, color) {
             const s = scale;
-            // Stem
-            ctx.strokeStyle = '#228B22';
-            ctx.lineWidth = 2 * s;
+            
+            // Stem with gradient
+            const stemGradient = ctx.createLinearGradient(x, y, x, y - 15 * s);
+            stemGradient.addColorStop(0, '#1B5E20');
+            stemGradient.addColorStop(1, '#4CAF50');
+            ctx.strokeStyle = stemGradient;
+            ctx.lineWidth = 2.5 * s;
+            ctx.lineCap = 'round';
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(x, y - 15 * s);
             ctx.stroke();
-            // Petals
-            ctx.fillStyle = color || '#FF69B4';
+            
+            // Leaf
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.ellipse(x - 4 * s, y - 8 * s, 3 * s, 5 * s, -0.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Petals with gradient
+            const petalColor = color || '#FF69B4';
             for (let i = 0; i < 5; i++) {
                 const angle = (i / 5) * Math.PI * 2;
+                const px = x + Math.cos(angle) * 5 * s;
+                const py = y - 15 * s + Math.sin(angle) * 5 * s;
+                
+                const petalGradient = ctx.createRadialGradient(px - s, py - s, 0, px, py, 4 * s);
+                petalGradient.addColorStop(0, petalColor);
+                petalGradient.addColorStop(1, petalColor + 'CC');
+                ctx.fillStyle = petalGradient;
                 ctx.beginPath();
-                ctx.arc(x + Math.cos(angle) * 5 * s, y - 15 * s + Math.sin(angle) * 5 * s, 4 * s, 0, Math.PI * 2);
+                ctx.arc(px, py, 4 * s, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Petal highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.beginPath();
+                ctx.arc(px - s * 0.8, py - s * 0.8, 1.5 * s, 0, Math.PI * 2);
                 ctx.fill();
             }
-            // Center
-            ctx.fillStyle = '#FFD700';
+            
+            // Center with gradient
+            const centerGradient = ctx.createRadialGradient(x - s, y - 15 * s - s, 0, x, y - 15 * s, 3 * s);
+            centerGradient.addColorStop(0, '#FFD700');
+            centerGradient.addColorStop(1, '#FFA500');
+            ctx.fillStyle = centerGradient;
             ctx.beginPath();
             ctx.arc(x, y - 15 * s, 3 * s, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Center details (stamens)
+            ctx.fillStyle = '#FF8C00';
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(angle) * s, y - 15 * s + Math.sin(angle) * s, 0.5 * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // Draw a picket fence section
@@ -793,13 +894,38 @@
         // Draw cloud
         function drawCloud(x, y, size) {
             const s = size * scale;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            
+            // Cloud shadow (subtle)
+            ctx.fillStyle = 'rgba(200, 200, 220, 0.3)';
+            ctx.beginPath();
+            ctx.arc(x + 2 * s, y + 2 * s, 20 * s, 0, Math.PI * 2);
+            ctx.arc(x + 27 * s, y - 3 * s, 25 * s, 0, Math.PI * 2);
+            ctx.arc(x + 52 * s, y + 2 * s, 20 * s, 0, Math.PI * 2);
+            ctx.arc(x + 17 * s, y + 12 * s, 15 * s, 0, Math.PI * 2);
+            ctx.arc(x + 37 * s, y + 10 * s, 18 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Main cloud with soft gradient
+            const cloudGradient = ctx.createRadialGradient(x + 25 * s, y, 0, x + 25 * s, y, 50 * s);
+            cloudGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            cloudGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.95)');
+            cloudGradient.addColorStop(1, 'rgba(240, 240, 250, 0.85)');
+            ctx.fillStyle = cloudGradient;
             ctx.beginPath();
             ctx.arc(x, y, 20 * s, 0, Math.PI * 2);
             ctx.arc(x + 25 * s, y - 5 * s, 25 * s, 0, Math.PI * 2);
             ctx.arc(x + 50 * s, y, 20 * s, 0, Math.PI * 2);
             ctx.arc(x + 15 * s, y + 10 * s, 15 * s, 0, Math.PI * 2);
             ctx.arc(x + 35 * s, y + 8 * s, 18 * s, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cloud highlights
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.arc(x + 20 * s, y - 8 * s, 10 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 45 * s, y - 3 * s, 8 * s, 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -816,20 +942,46 @@
             ctx.fillStyle = skyGradient;
             ctx.fillRect(0, 0, canvas.width, horizonY);
 
-            // Sun (with parallax)
+            // Sun (with parallax and glow)
             const parallaxOffset = camera.x * 0.1;
             const sunX = canvas.width * 0.85 - parallaxOffset * 0.3;
             const sunY = canvas.height * 0.12;
             const sunR = 35 * scale;
-            ctx.fillStyle = '#FFD700';
+            
+            // Sun glow (outer)
+            const sunGlowOuter = ctx.createRadialGradient(sunX, sunY, sunR * 0.5, sunX, sunY, sunR * 2.5);
+            sunGlowOuter.addColorStop(0, 'rgba(255, 223, 0, 0.3)');
+            sunGlowOuter.addColorStop(0.5, 'rgba(255, 215, 0, 0.15)');
+            sunGlowOuter.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            ctx.fillStyle = sunGlowOuter;
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, sunR * 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Sun body with gradient
+            const sunGradient = ctx.createRadialGradient(sunX - sunR * 0.3, sunY - sunR * 0.3, 0, sunX, sunY, sunR);
+            sunGradient.addColorStop(0, '#FFEB3B');
+            sunGradient.addColorStop(0.6, '#FFD700');
+            sunGradient.addColorStop(1, '#FFA500');
+            ctx.fillStyle = sunGradient;
             ctx.beginPath();
             ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
             ctx.fill();
 
+            // Sun rays
             for (let i = 0; i < 8; i++) {
                 const angle = (i / 8) * Math.PI * 2;
-                ctx.strokeStyle = '#FFD700';
-                ctx.lineWidth = 3 * scale;
+                const rayGradient = ctx.createLinearGradient(
+                    sunX + Math.cos(angle) * sunR * 1.15,
+                    sunY + Math.sin(angle) * sunR * 1.15,
+                    sunX + Math.cos(angle) * sunR * 1.6,
+                    sunY + Math.sin(angle) * sunR * 1.6
+                );
+                rayGradient.addColorStop(0, '#FFD700');
+                rayGradient.addColorStop(1, 'rgba(255, 215, 0, 0.3)');
+                ctx.strokeStyle = rayGradient;
+                ctx.lineWidth = 4 * scale;
+                ctx.lineCap = 'round';
                 ctx.beginPath();
                 ctx.moveTo(sunX + Math.cos(angle) * sunR * 1.15, sunY + Math.sin(angle) * sunR * 1.15);
                 ctx.lineTo(sunX + Math.cos(angle) * sunR * 1.6, sunY + Math.sin(angle) * sunR * 1.6);
