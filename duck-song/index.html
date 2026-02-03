@@ -2266,8 +2266,8 @@
                 if (gameRunning) showMessage("Whoops! Try again!");
             }
 
-            // Check if reached end of level
-            if (gameRunning && !levelCompleting && duck.x > worldWidth - 100 * scaleX && grapesCollected === totalGrapes) {
+            // Check if reached end of level (when duck gets close to the end)
+            if (gameRunning && !levelCompleting && duck.x > worldWidth - duck.width - 50 * scaleX && grapesCollected === totalGrapes) {
                 levelCompleting = true;
                 if (level >= MAX_LEVEL) {
                     showMessage("You Win! All 15 levels complete!");
@@ -2834,39 +2834,50 @@
             const touch = e.changedTouches[0];
             const rect = canvas.getBoundingClientRect();
             const x = (touch.clientX - rect.left) / rect.width;
+            const y = (touch.clientY - rect.top) / rect.height;
 
-            // Tap to jump
-            keys['touchJump'] = true;
-
-            // Fallback touch controls: left 30% = left, right 30% = right, middle = just jump
-            if (!tiltEnabled) {
-                activeTouchId = touch.identifier;
+            // Touch controls work alongside tilt for better control
+            activeTouchId = touch.identifier;
+            
+            // Bottom 25% of screen: directional controls (left/right/jump)
+            if (y > 0.75) {
                 if (x < 0.3) {
                     keys['touchLeft'] = true;
                     keys['touchRight'] = false;
                 } else if (x > 0.7) {
                     keys['touchRight'] = true;
                     keys['touchLeft'] = false;
+                } else {
+                    // Middle bottom = jump
+                    keys['touchJump'] = true;
                 }
+            } else {
+                // Tap anywhere else to jump
+                keys['touchJump'] = true;
             }
         }, { passive: false });
 
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            if (!tiltEnabled && activeTouchId !== null) {
+            if (activeTouchId !== null) {
                 for (const touch of e.changedTouches) {
                     if (touch.identifier === activeTouchId) {
                         const rect = canvas.getBoundingClientRect();
                         const x = (touch.clientX - rect.left) / rect.width;
-                        if (x < 0.3) {
-                            keys['touchLeft'] = true;
-                            keys['touchRight'] = false;
-                        } else if (x > 0.7) {
-                            keys['touchRight'] = true;
-                            keys['touchLeft'] = false;
-                        } else {
-                            keys['touchLeft'] = false;
-                            keys['touchRight'] = false;
+                        const y = (touch.clientY - rect.top) / rect.height;
+                        
+                        // Only update directional controls in bottom 25%
+                        if (y > 0.75) {
+                            if (x < 0.3) {
+                                keys['touchLeft'] = true;
+                                keys['touchRight'] = false;
+                            } else if (x > 0.7) {
+                                keys['touchRight'] = true;
+                                keys['touchLeft'] = false;
+                            } else {
+                                keys['touchLeft'] = false;
+                                keys['touchRight'] = false;
+                            }
                         }
                     }
                 }
