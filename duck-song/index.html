@@ -2191,22 +2191,23 @@
                     keys['touchJump'] = false; // Reset tap jump
                 }
 
-                // Shooting (X key or F key) - available from level 5
-                if ((keys['KeyX'] || keys['KeyF']) && level >= 5) {
+                // Shooting (X key or F key or touchShoot) - available from level 5
+                if ((keys['KeyX'] || keys['KeyF'] || keys['touchShoot']) && level >= 5) {
                     const now = Date.now();
                     if (now - lastShotTime > SHOT_COOLDOWN) {
                         seeds.push({
                             x: duck.x + (duck.facing > 0 ? duck.width : 0),
                             y: duck.y + duck.height / 2,
-                            vx: duck.facing * 12 * scaleX,
-                            vy: 0
+                            vx: duck.facing * 15 * scaleX,
+                            vy: -2 * scaleY  // Slight upward angle for straighter shot
                         });
                         lastShotTime = now;
                     }
+                    keys['touchShoot'] = false; // Reset touch shoot
                 }
 
-                // Helicopter controls (E to toggle, Space to fly up when active)
-                if (keys['KeyE'] && helicopter.available && !keys['helicopterToggled']) {
+                // Helicopter controls (E key or touchHeli to toggle, Space to fly up when active)
+                if ((keys['KeyE'] || keys['touchHeli']) && helicopter.available && !keys['helicopterToggled']) {
                     keys['helicopterToggled'] = true;
                     if (!helicopter.pickedUp) {
                         // Check if near helicopter pickup
@@ -2225,7 +2226,7 @@
                         }
                     }
                 }
-                if (!keys['KeyE']) keys['helicopterToggled'] = false;
+                if (!keys['KeyE'] && !keys['touchHeli']) keys['helicopterToggled'] = false;
 
                 // Helicopter flying
                 if (helicopter.active && helicopter.fuel > 0) {
@@ -2305,7 +2306,7 @@
                 const seed = seeds[i];
                 seed.x += seed.vx;
                 seed.y += seed.vy;
-                seed.vy += gravity * 0.3;  // Slight arc
+                seed.vy += gravity * 0.15;  // Reduced gravity for straighter shot
 
                 // Remove if off screen
                 if (seed.x < camera.x - 50 || seed.x > camera.x + canvas.width + 50 ||
@@ -2543,7 +2544,7 @@
                 ctx.fillText('SEED GUN', canvas.width - 115 * scale, canvas.height - 32 * scaleY);
                 ctx.fillStyle = '#FFF';
                 ctx.font = `${10 * scale}px Comic Sans MS`;
-                ctx.fillText('Press X/F to shoot', canvas.width - 115 * scale, canvas.height - 18 * scaleY);
+                ctx.fillText('X/F or TAP to shoot', canvas.width - 115 * scale, canvas.height - 18 * scaleY);
             }
 
             // Helicopter fuel indicator (level 6+)
@@ -2561,7 +2562,7 @@
                 ctx.fillRect(canvas.width - 115 * scale, canvas.height - 68 * scaleY, (helicopter.fuel / helicopter.maxFuel) * 100 * scale, 8 * scaleY);
                 ctx.fillStyle = '#FFF';
                 ctx.font = `${9 * scale}px Comic Sans MS`;
-                ctx.fillText('E: toggle, Space: fly', canvas.width - 115 * scale, canvas.height - 55 * scaleY);
+                ctx.fillText('E or TAP to toggle', canvas.width - 115 * scale, canvas.height - 55 * scaleY);
             }
 
             // End zone indicator (arrow pointing right at edge of screen when near end)
@@ -2835,6 +2836,19 @@
             const rect = canvas.getBoundingClientRect();
             const x = (touch.clientX - rect.left) / rect.width;
             const y = (touch.clientY - rect.top) / rect.height;
+
+            // Check if tapping on gun button (lower right, above 0.9 height)
+            if (level >= 5 && gameRunning && x > 0.85 && y > 0.9 && y < 0.98) {
+                keys['touchShoot'] = true;
+                return;
+            }
+
+            // Check if tapping on helicopter button (lower right, above gun button)
+            if (helicopter.available && helicopter.pickedUp && gameRunning && x > 0.85 && y > 0.81 && y < 0.9) {
+                keys['touchHeli'] = true;
+                setTimeout(() => keys['touchHeli'] = false, 100);
+                return;
+            }
 
             // Touch controls work alongside tilt for better control
             activeTouchId = touch.identifier;
