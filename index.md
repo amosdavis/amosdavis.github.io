@@ -4,7 +4,7 @@ title: Home
 ---
 
 <div style="text-align: center; padding: 2rem 0;">
-  <h1 style="font-size: 2.5rem; color: #2c3e50; margin-bottom: 1rem;">🎉 Welcome to Amos Davis's Corner of the Internet! 🎉</h1>
+  <h1 style="font-size: 2.5rem; color: #2c3e50; margin-bottom: 1rem;">🎉 Welcome to My Corner of the Internet! 🎉</h1>
   
   <p style="font-size: 1.2rem; color: #555; max-width: 600px; margin: 0 auto 2rem;">
     Hey there! You've stumbled upon my digital playground where I share thoughts, projects, and fun stuff. 
