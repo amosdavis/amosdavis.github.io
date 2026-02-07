@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <!-- Sky gradient -->
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB"/>
+      <stop offset="60%" style="stop-color:#E0F6FF"/>
+      <stop offset="100%" style="stop-color:#FFF5E6"/>
+    </linearGradient>
+
+    <!-- Sun glow -->
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="70%" style="stop-color:#FFA500"/>
+      <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Hill gradients -->
+    <linearGradient id="hillBack" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6B8E23"/>
+      <stop offset="100%" style="stop-color:#556B2F"/>
+    </linearGradient>
+    <linearGradient id="hillMid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7CFC00"/>
+      <stop offset="100%" style="stop-color:#32CD32"/>
+    </linearGradient>
+    <linearGradient id="hillFront" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#90EE90"/>
+      <stop offset="100%" style="stop-color:#228B22"/>
+    </linearGradient>
+
+    <!-- Tree gradient -->
+    <linearGradient id="treeGreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#228B22"/>
+      <stop offset="100%" style="stop-color:#006400"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="800" height="500" fill="url(#skyGradient)"/>
+
+  <!-- Sun -->
+  <circle cx="650" cy="100" r="50" fill="url(#sunGlow)"/>
+  <circle cx="650" cy="100" r="35" fill="#FFD700"/>
+
+  <!-- Clouds -->
+  <g fill="white" opacity="0.9">
+    <!-- Cloud 1 -->
+    <ellipse cx="150" cy="80" rx="50" ry="25"/>
+    <ellipse cx="190" cy="70" rx="40" ry="20"/>
+    <ellipse cx="120" cy="75" rx="35" ry="18"/>
+    <ellipse cx="170" cy="90" rx="45" ry="22"/>
+
+    <!-- Cloud 2 -->
+    <ellipse cx="450" cy="120" rx="60" ry="30"/>
+    <ellipse cx="500" cy="110" rx="45" ry="25"/>
+    <ellipse cx="410" cy="115" rx="40" ry="20"/>
+    <ellipse cx="460" cy="130" rx="50" ry="25"/>
+
+    <!-- Cloud 3 -->
+    <ellipse cx="300" cy="60" rx="35" ry="18"/>
+    <ellipse cx="330" cy="55" rx="30" ry="15"/>
+    <ellipse cx="280" cy="58" rx="25" ry="14"/>
+  </g>
+
+  <!-- Distant mountains -->
+  <path d="M0 280 L100 200 L200 250 L300 180 L400 230 L500 170 L600 220 L700 190 L800 240 L800 500 L0 500 Z" fill="#8FBC8F" opacity="0.6"/>
+
+  <!-- Back hills -->
+  <path d="M0 320 Q200 250 400 300 T800 280 L800 500 L0 500 Z" fill="url(#hillBack)"/>
+
+  <!-- Middle hills -->
+  <path d="M0 380 Q150 320 300 360 Q450 400 600 350 Q700 320 800 360 L800 500 L0 500 Z" fill="url(#hillMid)"/>
+
+  <!-- Barn -->
+  <g transform="translate(500, 290)">
+    <!-- Barn body -->
+    <rect x="0" y="30" width="80" height="60" fill="#8B4513"/>
+    <rect x="5" y="35" width="70" height="50" fill="#A0522D"/>
+    <!-- Barn roof -->
+    <polygon points="-10,30 40,0 90,30" fill="#8B0000"/>
+    <polygon points="-5,30 40,5 85,30" fill="#B22222"/>
+    <!-- Barn door -->
+    <rect x="25" y="50" width="30" height="40" fill="#654321"/>
+    <line x1="40" y1="50" x2="40" y2="90" stroke="#8B4513" stroke-width="2"/>
+    <!-- Barn window -->
+    <rect x="60" y="45" width="12" height="12" fill="#FFE4B5"/>
+    <line x1="66" y1="45" x2="66" y2="57" stroke="#8B4513" stroke-width="1"/>
+    <line x1="60" y1="51" x2="72" y2="51" stroke="#8B4513" stroke-width="1"/>
+    <!-- Silo -->
+    <rect x="85" y="20" width="25" height="70" fill="#696969"/>
+    <ellipse cx="97" cy="20" rx="12.5" ry="5" fill="#808080"/>
+    <ellipse cx="97" cy="90" rx="12.5" ry="5" fill="#505050"/>
+  </g>
+
+  <!-- Trees - back row -->
+  <g>
+    <!-- Tree 1 -->
+    <rect x="95" y="300" width="10" height="40" fill="#8B4513"/>
+    <ellipse cx="100" cy="280" rx="30" ry="40" fill="url(#treeGreen)"/>
+
+    <!-- Tree 2 -->
+    <rect x="175" y="310" width="10" height="35" fill="#8B4513"/>
+    <ellipse cx="180" cy="295" rx="25" ry="35" fill="url(#treeGreen)"/>
+
+    <!-- Tree 3 -->
+    <rect x="695" y="295" width="10" height="40" fill="#8B4513"/>
+    <ellipse cx="700" cy="275" rx="28" ry="38" fill="url(#treeGreen)"/>
+  </g>
+
+  <!-- Front hills -->
+  <path d="M0 420 Q100 380 250 410 Q400 450 550 400 Q700 360 800 400 L800 500 L0 500 Z" fill="url(#hillFront)"/>
+
+  <!-- Fence -->
+  <g fill="#DEB887" stroke="#8B4513" stroke-width="1">
+    <rect x="50" y="410" width="5" height="35"/>
+    <rect x="100" y="415" width="5" height="30"/>
+    <rect x="150" y="410" width="5" height="35"/>
+    <rect x="200" y="418" width="5" height="27"/>
+    <rect x="250" y="412" width="5" height="33"/>
+    <!-- Horizontal rails -->
+    <line x1="50" y1="420" x2="255" y2="420" stroke="#DEB887" stroke-width="4"/>
+    <line x1="50" y1="435" x2="255" y2="435" stroke="#DEB887" stroke-width="4"/>
+  </g>
+
+  <!-- Windmill -->
+  <g transform="translate(350, 350)">
+    <rect x="-8" y="0" width="16" height="60" fill="#D2B48C"/>
+    <rect x="-12" y="55" width="24" height="10" fill="#A0522D"/>
+    <!-- Blades -->
+    <g fill="#F5F5DC" stroke="#8B4513" stroke-width="1">
+      <polygon points="0,-5 -8,-45 0,-45 8,-5" transform="rotate(0)"/>
+      <polygon points="0,-5 -8,-45 0,-45 8,-5" transform="rotate(90)"/>
+      <polygon points="0,-5 -8,-45 0,-45 8,-5" transform="rotate(180)"/>
+      <polygon points="0,-5 -8,-45 0,-45 8,-5" transform="rotate(270)"/>
+    </g>
+    <circle cx="0" cy="0" r="5" fill="#8B4513"/>
+  </g>
+
+  <!-- Flowers scattered in foreground -->
+  <g>
+    <!-- Yellow flowers -->
+    <circle cx="80" cy="450" r="4" fill="#FFD700"/>
+    <circle cx="120" cy="465" r="3" fill="#FFD700"/>
+    <circle cx="200" cy="455" r="4" fill="#FFD700"/>
+    <circle cx="320" cy="470" r="3" fill="#FFD700"/>
+    <circle cx="450" cy="460" r="4" fill="#FFD700"/>
+
+    <!-- Red flowers -->
+    <circle cx="150" cy="458" r="3" fill="#FF6347"/>
+    <circle cx="280" cy="468" r="4" fill="#FF6347"/>
+    <circle cx="380" cy="455" r="3" fill="#FF6347"/>
+    <circle cx="520" cy="475" r="4" fill="#FF6347"/>
+
+    <!-- White flowers -->
+    <circle cx="100" cy="472" r="3" fill="#FFFAFA"/>
+    <circle cx="240" cy="460" r="3" fill="#FFFAFA"/>
+    <circle cx="400" cy="478" r="3" fill="#FFFAFA"/>
+    <circle cx="600" cy="465" r="4" fill="#FFFAFA"/>
+
+    <!-- Purple flowers -->
+    <circle cx="180" cy="475" r="3" fill="#DDA0DD"/>
+    <circle cx="350" cy="462" r="4" fill="#DDA0DD"/>
+    <circle cx="480" cy="480" r="3" fill="#DDA0DD"/>
+    <circle cx="700" cy="470" r="4" fill="#DDA0DD"/>
+  </g>
+
+  <!-- Grass tufts -->
+  <g stroke="#228B22" stroke-width="2" fill="none">
+    <path d="M30 480 Q35 460 32 450"/>
+    <path d="M35 480 Q38 465 40 455"/>
+    <path d="M40 480 Q42 468 38 458"/>
+
+    <path d="M650 475 Q655 455 652 445"/>
+    <path d="M655 475 Q658 460 660 450"/>
+    <path d="M660 475 Q662 463 658 453"/>
+
+    <path d="M750 470 Q755 450 752 440"/>
+    <path d="M755 470 Q758 455 760 445"/>
+    <path d="M760 470 Q762 458 758 448"/>
+  </g>
+
+  <!-- Birds in sky -->
+  <g stroke="#333" stroke-width="2" fill="none">
+    <path d="M200 150 Q210 145 220 150 Q230 145 240 150"/>
+    <path d="M250 130 Q258 126 266 130 Q274 126 282 130"/>
+    <path d="M550 90 Q558 86 566 90 Q574 86 582 90"/>
+  </g>
+
+  <!-- Path/road -->
+  <path d="M400 500 Q380 450 420 400 Q400 350 450 300" fill="none" stroke="#D2691E" stroke-width="15" opacity="0.6"/>
+  <path d="M400 500 Q380 450 420 400 Q400 350 450 300" fill="none" stroke="#DEB887" stroke-width="8" opacity="0.4" stroke-dasharray="10,10"/>
+</svg>

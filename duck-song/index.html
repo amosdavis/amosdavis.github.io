@@ -436,8 +436,6 @@
             pickupX: 0,
             pickupY: 0,
             pickedUp: false,
-            duration: 100,
-            maxDuration: 100,
             invincible: false
         };
 
@@ -2815,7 +2813,6 @@
                 doomslayerSuit.available = true;
                 doomslayerSuit.active = false;
                 doomslayerSuit.pickedUp = false;
-                doomslayerSuit.duration = doomslayerSuit.maxDuration;
                 doomslayerSuit.invincible = false;
                 doomslayerSuit.pickupX = 250 * scaleX;
                 doomslayerSuit.pickupY = groundY - 60 * scaleY;
@@ -3142,13 +3139,11 @@
                         }
                     } else {
                         doomslayerSuit.active = !doomslayerSuit.active;
-                        doomslayerSuit.invincible = doomslayerSuit.active && doomslayerSuit.duration > 0;
-                        if (doomslayerSuit.active && doomslayerSuit.duration > 0) {
+                        doomslayerSuit.invincible = doomslayerSuit.active;
+                        if (doomslayerSuit.active) {
                             showMessage("Suit ON - RIP AND TEAR!");
-                        } else if (doomslayerSuit.duration <= 0) {
-                            showMessage("Suit depleted!");
-                            doomslayerSuit.active = false;
-                            doomslayerSuit.invincible = false;
+                        } else {
+                            showMessage("Suit OFF");
                         } else {
                             showMessage("Suit OFF");
                         }
@@ -3156,15 +3151,13 @@
                 }
                 if (!keys['KeyE'] && !keys['touchHeli']) keys['suitToggled'] = false;
 
-                // Doomslayer suit duration drain
-                if (doomslayerSuit.active && doomslayerSuit.duration > 0) {
-                    doomslayerSuit.duration -= 0.08;
-                    if (doomslayerSuit.duration <= 0) {
-                        doomslayerSuit.duration = 0;
-                        doomslayerSuit.active = false;
-                        doomslayerSuit.invincible = false;
-                        showMessage("Suit power depleted!");
-                    }
+                // Doomslayer suit - auto-activate in hell levels
+                if (level >= 10 && doomslayerSuit.pickedUp) {
+                    doomslayerSuit.active = true;
+                    doomslayerSuit.invincible = true;
+                } else if (level < 10) {
+                    doomslayerSuit.active = false;
+                    doomslayerSuit.invincible = false;
                 }
 
                 // Helicopter flying
@@ -3561,9 +3554,11 @@
                 // Duration bar
                 ctx.fillStyle = '#333';
                 ctx.fillRect(canvas.width - 115 * scale, canvas.height - 68 * scaleY, 100 * scale, 8 * scaleY);
-                const durationPct = doomslayerSuit.duration / doomslayerSuit.maxDuration;
-                ctx.fillStyle = durationPct > 0.2 ? '#00FF44' : '#FF4500';
-                ctx.fillRect(canvas.width - 115 * scale, canvas.height - 68 * scaleY, durationPct * 100 * scale, 8 * scaleY);
+                // Doomslayer suit indicator (always full when active since no fuel)
+                ctx.fillStyle = '#999';
+                ctx.fillRect(canvas.width - 115 * scale, canvas.height - 68 * scaleY, 100 * scale, 8 * scaleY);
+                ctx.fillStyle = doomslayerSuit.active ? '#00FF44' : '#666';
+                ctx.fillRect(canvas.width - 115 * scale, canvas.height - 68 * scaleY, 100 * scale, 8 * scaleY);
                 ctx.fillStyle = '#FFF';
                 ctx.font = `${9 * scale}px Comic Sans MS`;
                 ctx.fillText(doomslayerSuit.active ? 'ACTIVE' : 'E or TAP to toggle', canvas.width - 115 * scale, canvas.height - 55 * scaleY);
@@ -3776,11 +3771,11 @@
             ctx.arc(x + 65*s, y + 28*s, 2*s, 0, Math.PI * 2);
             ctx.fill();
 
-            // Frown (annoyed expression)
+            // Smile (happy expression)
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(x + 60*s, y + 42*s, 5*s, 1.2 * Math.PI, 1.8 * Math.PI);
+            ctx.arc(x + 60*s, y + 35*s, 5*s, 0.2 * Math.PI, 0.8 * Math.PI);
             ctx.stroke();
 
             // Apron
@@ -4022,13 +4017,9 @@
                             }
                         } else {
                             doomslayerSuit.active = !doomslayerSuit.active;
-                            doomslayerSuit.invincible = doomslayerSuit.active && doomslayerSuit.duration > 0;
-                            if (doomslayerSuit.active && doomslayerSuit.duration > 0) {
+                            doomslayerSuit.invincible = doomslayerSuit.active;
+                            if (doomslayerSuit.active) {
                                 showMessage("Suit ON - RIP AND TEAR!");
-                            } else if (doomslayerSuit.duration <= 0) {
-                                showMessage("Suit depleted!");
-                                doomslayerSuit.active = false;
-                                doomslayerSuit.invincible = false;
                             } else {
                                 showMessage("Suit OFF");
                             }

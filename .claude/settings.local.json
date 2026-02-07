@@ -11,7 +11,15 @@
       "Bash(git pull:*)",
       "Bash(node -c:*)",
       "Bash(unzip:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "WebSearch",
+      "WebFetch(domain:simonwillison.net)",
+      "WebFetch(domain:www.moltbook.com)",
+      "WebFetch(domain:tradermade.com)",
+      "WebFetch(domain:www.histdata.com)",
+      "Bash(python:*)",
+      "Bash(git init:*)",
+      "Bash(node:*)"
     ]
   }
 }
