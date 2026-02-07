@@ -295,10 +295,11 @@
             // Use visualViewport for accurate sizing on iOS Safari
             const vv = window.visualViewport;
             const isMobile = window.matchMedia('(pointer: coarse), (max-width: 600px)').matches;
+            const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
 
             let width, height;
-            if (isMobile) {
-                // On mobile, use full viewport
+            if (isMobile || isFullscreen) {
+                // On mobile or fullscreen, use full viewport
                 width = Math.floor(vv ? vv.width : window.innerWidth);
                 height = Math.floor(vv ? vv.height : window.innerHeight);
             } else {
@@ -2195,11 +2196,12 @@
                 if ((keys['KeyX'] || keys['KeyF'] || keys['touchShoot']) && level >= 5) {
                     const now = Date.now();
                     if (now - lastShotTime > SHOT_COOLDOWN) {
+                        // Spawn seed at gun barrel tip (local coord 78,37 -> offset 53,7 from duck center)
                         seeds.push({
-                            x: duck.x + (duck.facing > 0 ? duck.width : 0),
-                            y: duck.y + duck.height / 2,
+                            x: duck.x + duck.width / 2 + duck.facing * 53 * scale,
+                            y: duck.y + duck.height / 2 + 7 * scale,
                             vx: duck.facing * 15 * scaleX,
-                            vy: -2 * scaleY  // Slight upward angle for straighter shot
+                            vy: 0  // Straight shot, no arc
                         });
                         lastShotTime = now;
                     }
@@ -2306,7 +2308,6 @@
                 const seed = seeds[i];
                 seed.x += seed.vx;
                 seed.y += seed.vy;
-                seed.vy += gravity * 0.15;  // Reduced gravity for straighter shot
 
                 // Remove if off screen
                 if (seed.x < camera.x - 50 || seed.x > camera.x + canvas.width + 50 ||
@@ -2844,7 +2845,7 @@
             }
 
             // Check if tapping on helicopter button (lower right, above gun button)
-            if (helicopter.available && helicopter.pickedUp && gameRunning && x > 0.85 && y > 0.81 && y < 0.9) {
+            if (helicopter.available && gameRunning && x > 0.85 && y > 0.81 && y < 0.9) {
                 keys['touchHeli'] = true;
                 setTimeout(() => keys['touchHeli'] = false, 100);
                 return;
@@ -2989,14 +2990,24 @@
         helicopterBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (!helicopterBtn.classList.contains('disabled') && helicopter.available && helicopter.pickedUp) {
+            if (!helicopterBtn.classList.contains('disabled') && helicopter.available) {
                 if (!keys['helicopterToggled']) {
                     keys['helicopterToggled'] = true;
-                    helicopter.active = !helicopter.active;
-                    if (helicopter.active && helicopter.fuel > 0) {
-                        showMessage("Helicopter ON");
+                    if (!helicopter.pickedUp) {
+                        // Check if near helicopter pickup
+                        const distToPickup = Math.abs(duck.x - helicopter.pickupX) + Math.abs(duck.y - helicopter.pickupY);
+                        if (distToPickup < 100 * scale) {
+                            helicopter.pickedUp = true;
+                            helicopter.active = true;
+                            showMessage("Helicopter activated! Space to fly!");
+                        }
                     } else {
-                        showMessage("Helicopter OFF");
+                        helicopter.active = !helicopter.active;
+                        if (helicopter.active && helicopter.fuel > 0) {
+                            showMessage("Helicopter ON");
+                        } else {
+                            showMessage("Helicopter OFF");
+                        }
                     }
                 }
             }
@@ -3030,8 +3041,8 @@
                 shootBtn.classList.add('disabled');
             }
             
-            // Helicopter available from level 6 and when picked up
-            if (level >= 6 && helicopter.available && helicopter.pickedUp && gameRunning) {
+            // Helicopter available from level 6 (enable button for pickup and toggle)
+            if (level >= 6 && helicopter.available && gameRunning) {
                 helicopterBtn.classList.remove('disabled');
             } else {
                 helicopterBtn.classList.add('disabled');
