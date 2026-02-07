@@ -1667,8 +1667,9 @@
         }
 
         // Draw helicopter
-        function drawHelicopter(x, y, isPickup) {
+        function drawHelicopter(x, y, isPickup, facing) {
             const s = scale;
+            const f = facing || 1; // 1 = right, -1 = left
 
             if (isPickup) {
                 // Glowing pickup effect
@@ -1678,10 +1679,14 @@
                 ctx.fill();
             }
 
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(f, 1);
+
             // Body
             ctx.fillStyle = '#4169E1';
             ctx.beginPath();
-            ctx.ellipse(x, y, 30 * s, 15 * s, 0, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, 30 * s, 15 * s, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
@@ -1690,53 +1695,55 @@
             // Cockpit
             ctx.fillStyle = '#87CEEB';
             ctx.beginPath();
-            ctx.ellipse(x + 15 * s, y, 12 * s, 10 * s, 0, 0, Math.PI * 2);
+            ctx.ellipse(15 * s, 0, 12 * s, 10 * s, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
             // Tail
             ctx.fillStyle = '#4169E1';
             ctx.beginPath();
-            ctx.moveTo(x - 25 * s, y - 5 * s);
-            ctx.lineTo(x - 50 * s, y - 8 * s);
-            ctx.lineTo(x - 50 * s, y + 8 * s);
-            ctx.lineTo(x - 25 * s, y + 5 * s);
+            ctx.moveTo(-25 * s, -5 * s);
+            ctx.lineTo(-50 * s, -8 * s);
+            ctx.lineTo(-50 * s, 8 * s);
+            ctx.lineTo(-25 * s, 5 * s);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
 
             // Tail rotor
             ctx.fillStyle = '#333';
-            ctx.fillRect(x - 52 * s, y - 15 * s, 4 * s, 30 * s);
+            ctx.fillRect(-52 * s, -15 * s, 4 * s, 30 * s);
 
             // Main rotor
             const rotorAngle = Date.now() * 0.03;
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 3 * s;
             ctx.beginPath();
-            ctx.moveTo(x + Math.cos(rotorAngle) * 40 * s, y - 18 * s);
-            ctx.lineTo(x - Math.cos(rotorAngle) * 40 * s, y - 18 * s);
+            ctx.moveTo(Math.cos(rotorAngle) * 40 * s, -18 * s);
+            ctx.lineTo(-Math.cos(rotorAngle) * 40 * s, -18 * s);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(x + Math.sin(rotorAngle) * 40 * s, y - 18 * s);
-            ctx.lineTo(x - Math.sin(rotorAngle) * 40 * s, y - 18 * s);
+            ctx.moveTo(Math.sin(rotorAngle) * 40 * s, -18 * s);
+            ctx.lineTo(-Math.sin(rotorAngle) * 40 * s, -18 * s);
             ctx.stroke();
 
             // Rotor hub
             ctx.fillStyle = '#333';
             ctx.beginPath();
-            ctx.arc(x, y - 18 * s, 5 * s, 0, Math.PI * 2);
+            ctx.arc(0, -18 * s, 5 * s, 0, Math.PI * 2);
             ctx.fill();
 
             // Skids
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 3 * s;
             ctx.beginPath();
-            ctx.moveTo(x - 20 * s, y + 15 * s);
-            ctx.lineTo(x - 20 * s, y + 22 * s);
-            ctx.lineTo(x + 20 * s, y + 22 * s);
-            ctx.lineTo(x + 20 * s, y + 15 * s);
+            ctx.moveTo(-20 * s, 15 * s);
+            ctx.lineTo(-20 * s, 22 * s);
+            ctx.lineTo(20 * s, 22 * s);
+            ctx.lineTo(20 * s, 15 * s);
             ctx.stroke();
+
+            ctx.restore();
         }
 
         // Draw platforms (already in screen coords)
@@ -2490,8 +2497,8 @@
             // Duck (with camera offset) - hide when in helicopter
             const duckScreenX = duck.x - camera.x;
             if (helicopter.active) {
-                // Draw helicopter with duck inside (duck hidden)
-                drawHelicopter(duckScreenX + duck.width / 2, duck.y + duck.height / 2, false);
+                // Draw helicopter with duck inside (duck hidden), facing duck's direction
+                drawHelicopter(duckScreenX + duck.width / 2, duck.y + duck.height / 2, false, duck.facing);
             } else {
                 // Draw duck normally (with gun if level 5+)
                 drawDuck(duckScreenX, duck.y, duck.facing, duck.walkFrame, level >= 5);
