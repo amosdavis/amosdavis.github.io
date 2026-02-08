@@ -5,3 +5,10 @@ _site/
 vendor/
 .bundle/
 *.gem
+
+# Go build artifacts
+math-proxy/math-proxy
+math-proxy/test_client
+*.exe
+*.test
+*.out

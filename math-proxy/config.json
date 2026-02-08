@@ -1,0 +1,5 @@
+{
+  "listen_addr": "0.0.0.0:3333",
+  "upstream_addr": "localhost:3334",
+  "debug": false
+}
