@@ -164,6 +164,10 @@ math-proxy/
 ├── proxy.go         # Proxy server implementation
 ├── stratum.go       # Stratum protocol structures
 ├── randomx.go       # RandomX hash calculations
+├── proxy_test.go    # Unit tests
+├── config.json      # Sample configuration
+├── examples/        # Example clients
+│   └── test_client.go
 └── README.md        # This file
 ```
 

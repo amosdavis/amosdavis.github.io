@@ -8,6 +8,20 @@ import (
 	"time"
 )
 
+// StratumRequest represents a JSON-RPC request from a mining client
+type StratumRequest struct {
+	ID     interface{}   `json:"id"`
+	Method string        `json:"method"`
+	Params []interface{} `json:"params"`
+}
+
+// StratumResponse represents a JSON-RPC response to a mining client
+type StratumResponse struct {
+	ID     interface{}   `json:"id"`
+	Result interface{}   `json:"result"`
+	Error  []interface{} `json:"error"`
+}
+
 // TestClient is a simple Stratum client for testing
 func main() {
 	// Connect to the proxy
