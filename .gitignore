@@ -9,6 +9,7 @@ vendor/
 # Go build artifacts
 math-proxy/math-proxy
 math-proxy/test_client
+math-proxy/examples/test_client
 *.exe
 *.test
 *.out
