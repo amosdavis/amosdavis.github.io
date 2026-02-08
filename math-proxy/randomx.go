@@ -52,22 +52,32 @@ func ValidateRandomXHash(hash []byte, target []byte) bool {
 }
 
 // DifficultyToTarget converts a difficulty value to a target
+// This is a simplified implementation for demonstration
 func DifficultyToTarget(difficulty float64) []byte {
 	// Simplified difficulty to target conversion
+	// In production, you would use proper big-integer math
 	target := make([]byte, 32)
 	
-	// Maximum target (difficulty 1)
-	maxTarget := make([]byte, 32)
-	maxTarget[0] = 0xFF
-	maxTarget[1] = 0xFF
-	maxTarget[2] = 0xFF
-	maxTarget[3] = 0xFF
-	
-	// Scale down by difficulty
-	scale := 1.0 / difficulty
-	for i := 0; i < 4; i++ {
-		target[i] = byte(float64(maxTarget[i]) * scale)
+	if difficulty <= 0 {
+		difficulty = 1
 	}
+	
+	// Maximum target (difficulty 1) - simplified representation
+	// Real implementation would use the actual network's maximum target
+	maxTargetValue := uint64(0xFFFFFFFF)
+	
+	// Calculate target value by dividing max by difficulty
+	targetValue := uint64(float64(maxTargetValue) / difficulty)
+	
+	// Store in first 8 bytes (little-endian)
+	target[0] = byte(targetValue)
+	target[1] = byte(targetValue >> 8)
+	target[2] = byte(targetValue >> 16)
+	target[3] = byte(targetValue >> 24)
+	target[4] = byte(targetValue >> 32)
+	target[5] = byte(targetValue >> 40)
+	target[6] = byte(targetValue >> 48)
+	target[7] = byte(targetValue >> 56)
 	
 	return target
 }

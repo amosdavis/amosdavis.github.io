@@ -80,9 +80,12 @@ func (p *Proxy) handleClient(conn net.Conn) {
 	defer p.wg.Done()
 	defer conn.Close()
 
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	delete(p.clients, conn)
+	// Remove client from map when done
+	defer func() {
+		p.mu.Lock()
+		delete(p.clients, conn)
+		p.mu.Unlock()
+	}()
 
 	clientAddr := conn.RemoteAddr().String()
 	log.Printf("Client connected: %s", clientAddr)

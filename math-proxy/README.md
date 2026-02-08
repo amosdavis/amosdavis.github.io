@@ -32,7 +32,7 @@ The proxy:
 
 ### Prerequisites
 
-- Go 1.18 or higher
+- Go 1.21 or higher
 - Git (for cloning the repository)
 
 ### Building from Source
