@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Amos Davis</title>
+  <style>
+    :root {
+      --dark: #1a1a2e;
+      --mid: #16213e;
+      --accent: #0f3460;
+      --red: #d70a53;
+      --bg: #f5f6f8;
+      --card-bg: #fff;
+      --border: #e0e0e0;
+      --text: #333;
+      --muted: #777;
+      --link: #0f3460;
+      --mono: 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, var(--dark) 0%, var(--mid) 50%, var(--accent) 100%);
+      color: #fff;
+      padding: 3rem 0 2.5rem;
+      border-bottom: 4px solid var(--red);
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+    header .intro {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    header .tagline {
+      color: rgba(255,255,255,0.7);
+      font-size: 1rem;
+      margin-top: 0.25rem;
+    }
+    .header-links {
+      margin-top: 1rem;
+      display: flex;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .header-links a {
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: color 0.15s;
+    }
+    .header-links a:hover { color: #fff; }
+
+    /* Main */
+    main { padding: 2rem 0 3rem; }
+
+    /* Section cards */
+    section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    section h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.7rem 1.25rem;
+      background: #f5f5f5;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #666;
+    }
+    .content {
+      padding: 1.25rem;
+    }
+
+    /* Pages grid */
+    .pages-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .page-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      text-decoration: none;
+      color: var(--text);
+      display: block;
+    }
+    .page-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 2px 8px rgba(15,52,96,0.1);
+      text-decoration: none;
+    }
+    .page-card .icon {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+    .page-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      color: var(--link);
+    }
+    .page-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .page-card .badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.1em 0.45em;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+    .badge-apt { background: #e8f5e9; color: #2e7d32; }
+    .badge-game { background: #fff3e0; color: #e65100; }
+    .badge-art { background: #e3f2fd; color: #1565c0; }
+
+    /* Projects grid */
+    .projects-list {
+      list-style: none;
+      padding: 0;
+    }
+    .projects-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .projects-list li:last-child { border-bottom: none; }
+    .projects-list a {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      color: var(--link);
+      text-decoration: none;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .projects-list a:hover { text-decoration: underline; }
+    .projects-list .desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .projects-list .lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.1em 0.4em;
+      border-radius: 3px;
+      background: #f0f0f0;
+      color: #555;
+      flex-shrink: 0;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 0;
+      text-align: center;
+      font-size: 0.82rem;
+      color: #999;
+    }
+    footer a { color: #777; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      header .intro { flex-direction: column; text-align: center; }
+      .header-links { justify-content: center; }
+      .pages-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="intro">
+        <img class="avatar" src="https://avatars.githubusercontent.com/u/3028179?v=4" alt="Amos Davis">
+        <div>
+          <h1>Amos Davis</h1>
+          <div class="tagline">Software &amp; Systems Engineering</div>
+          <div class="header-links">
+            <a href="https://github.com/amosdavis">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+              GitHub
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section>
+      <h2>Pages &amp; Sites</h2>
+      <div class="content">
+        <div class="pages-grid">
+          <a class="page-card" href="/uckSMP-hypervisor/">
+            <div class="icon">⚙️</div>
+            <h3>UCK SMP Hypervisor <span class="badge badge-apt">APT Repo</span></h3>
+            <p>Debian APT repository for the UCK SMP hypervisor kernel module &amp; userspace tools. Turns multiple Linux VMs into a single shared-CPU/memory system.</p>
+          </a>
+          <a class="page-card" href="/duck-song/">
+            <div class="icon">🦆</div>
+            <h3>The Duck Song Game <span class="badge badge-game">Game</span></h3>
+            <p>Help the duck collect grapes! A multi-level browser game with power-ups, helicopters, and doom suits.</p>
+          </a>
+          <a class="page-card" href="/scenic-country.html">
+            <div class="icon">🎨</div>
+            <h3>Scenic Country <span class="badge badge-art">CSS Art</span></h3>
+            <p>A scenic countryside landscape rendered entirely in CSS — mountains, trees, clouds, and a sunset sky.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Open Source Projects</h2>
+      <div class="content">
+        <ul class="projects-list">
+          <li>
+            <a href="https://github.com/amosdavis/uckSMP-hypervisor">uckSMP-hypervisor</a>
+            <span class="lang">C</span>
+            <span class="desc">Kernel module + userspace tools that turns multiple QEMU VMs into an SMP-like system</span>
+          </li>
+          <li>
+            <a href="https://github.com/amosdavis/go-json-library">go-json-library</a>
+            <span class="lang">Go</span>
+            <span class="desc">JSON parsing and manipulation library for Go</span>
+          </li>
+          <li>
+            <a href="https://github.com/amosdavis/public-mining-golang">public-mining-golang</a>
+            <span class="lang">Go</span>
+            <span class="desc">Cryptocurrency mining tools in Go</span>
+          </li>
+          <li>
+            <a href="https://github.com/amosdavis/POOL">POOL</a>
+            <span class="lang">PHP</span>
+            <span class="desc">Mining pool software</span>
+          </li>
+          <li>
+            <a href="https://github.com/amosdavis/Orlando-Blurb">Orlando-Blurb</a>
+            <span class="lang">HTML</span>
+            <span class="desc">Orlando city blurb page</span>
+          </li>
+          <li>
+            <a href="https://github.com/amosdavis/gridspot_litecoin_mining">gridspot_litecoin_mining</a>
+            <span class="lang">Shell</span>
+            <span class="desc">Litecoin mining setup for Gridspot</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <a href="https://github.com/amosdavis">github.com/amosdavis</a> &middot;
+      Hosted on GitHub Pages
+    </div>
+  </footer>
+</body>
+</html>
