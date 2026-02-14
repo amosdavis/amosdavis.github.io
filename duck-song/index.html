@@ -139,7 +139,7 @@
             z-index: 100;
             margin: 0;
         }
-        #startScreen, #winScreen {
+        #startScreen, #winScreen, #levelSelector {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -238,7 +238,7 @@
             #ui { font-size: 14px; gap: 10px; padding: 8px 12px; }
             #instructions { font-size: 12px; }
             .screen-btn { font-size: 18px; padding: 12px 22px; }
-            #startScreen, #winScreen { padding: 20px; }
+            #startScreen, #winScreen, #levelSelector { padding: 20px; }
             #musicBtn { font-size: 12px; padding: 6px 12px; }
             #startScreen h1, #winScreen h1 { font-size: 28px !important; }
             #startScreen p, #winScreen p { font-size: 14px !important; }
@@ -3607,13 +3607,6 @@
                 ctx.fillText(gameMessage, canvas.width / 2, 20 * scaleY + msgH * 0.65);
             }
 
-            // DEBUG: Show keyboard state
-            ctx.fillStyle = 'rgba(0,0,0,0.7)';
-            ctx.fillRect(0, canvas.height - 22, canvas.width, 22);
-            ctx.fillStyle = '#0f0';
-            ctx.font = '12px monospace';
-            ctx.textAlign = 'left';
-            ctx.fillText(debugKeyInfo, 5, canvas.height - 7);
         }
 
         // Draw lemonade stand at specific screen X position
@@ -3792,21 +3785,10 @@
             ctx.strokeRect(x + 48*s, y + 45*s, 24*s, 25*s);
         }
 
-        let lastError = '';
         function gameLoop() {
-            try {
-                update();
-                draw();
-                updateMobileButtons(); // Update button states each frame
-            } catch(e) {
-                if (e.message !== lastError) {
-                    lastError = e.message;
-                    console.error('Game error:', e);
-                }
-                ctx.fillStyle = 'red';
-                ctx.font = '16px monospace';
-                ctx.fillText('ERROR: ' + e.message, 10, 30);
-            }
+            update();
+            draw();
+            updateMobileButtons(); // Update button states each frame
             requestAnimationFrame(gameLoop);
         }
 
@@ -3846,10 +3828,8 @@
         }
 
         // Event listeners
-        let debugKeyInfo = 'No key pressed yet';
         document.addEventListener('keydown', (e) => {
             keys[e.code] = true;
-            debugKeyInfo = 'KEY: ' + e.code + ' | running=' + gameRunning + ' demo=' + demoMode;
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
                 e.preventDefault();
             }
