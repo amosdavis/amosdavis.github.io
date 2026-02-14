@@ -2424,19 +2424,19 @@
             ctx.translate(x, y - bodyBob);
             ctx.scale(f, 1);
 
-            // Back arm (behind body)
+            // Back arm (behind body, attached at shoulder)
             ctx.save();
-            ctx.translate(-8 * s, -15 * s);
-            ctx.rotate((-30 + armSwing) * Math.PI / 180);
-            ctx.fillStyle = '#2A8A2A';
-            ctx.fillRect(-4 * s, 0, 8 * s, 22 * s);
+            ctx.translate(-14 * s, -24 * s);
+            ctx.rotate((-10 + armSwing * 0.6) * Math.PI / 180);
+            ctx.fillStyle = '#228822';
+            ctx.fillRect(-3.5 * s, 0, 7 * s, 20 * s);
             ctx.strokeStyle = '#0A440A';
             ctx.lineWidth = 2 * s;
-            ctx.strokeRect(-4 * s, 0, 8 * s, 22 * s);
+            ctx.strokeRect(-3.5 * s, 0, 7 * s, 20 * s);
             // Fist
-            ctx.fillStyle = '#33AA33';
+            ctx.fillStyle = '#2A8A2A';
             ctx.beginPath();
-            ctx.arc(0, 24 * s, 5 * s, 0, Math.PI * 2);
+            ctx.arc(0, 22 * s, 4.5 * s, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
             ctx.restore();
@@ -2503,19 +2503,19 @@
             ctx.strokeStyle = '#0A440A';
             ctx.lineWidth = 2 * s;
             ctx.beginPath();
-            ctx.ellipse(18 * s, -22 * s, 10 * s, 8 * s, 0.2, 0, Math.PI * 2);
+            ctx.ellipse(14 * s, -26 * s, 9 * s, 6 * s, 0.2, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
-            // Front arm (extended forward, swinging)
+            // Front arm (attached at shoulder, swinging)
             ctx.save();
-            ctx.translate(14 * s, -15 * s);
-            ctx.rotate((20 - armSwing) * Math.PI / 180);
+            ctx.translate(14 * s, -24 * s);
+            ctx.rotate((10 - armSwing * 0.6) * Math.PI / 180);
             ctx.fillStyle = '#33AA33';
-            ctx.fillRect(-4 * s, 0, 8 * s, 24 * s);
+            ctx.fillRect(-3.5 * s, 0, 7 * s, 22 * s);
             ctx.strokeStyle = '#0A440A';
             ctx.lineWidth = 2 * s;
-            ctx.strokeRect(-4 * s, 0, 8 * s, 24 * s);
+            ctx.strokeRect(-3.5 * s, 0, 7 * s, 22 * s);
             // Fist
             ctx.fillStyle = '#33AA33';
             ctx.beginPath();
