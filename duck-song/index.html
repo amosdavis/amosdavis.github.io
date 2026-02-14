@@ -3606,6 +3606,14 @@
                 ctx.textAlign = 'center';
                 ctx.fillText(gameMessage, canvas.width / 2, 20 * scaleY + msgH * 0.65);
             }
+
+            // DEBUG: Show keyboard state
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0, canvas.height - 22, canvas.width, 22);
+            ctx.fillStyle = '#0f0';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText(debugKeyInfo, 5, canvas.height - 7);
         }
 
         // Draw lemonade stand at specific screen X position
@@ -3784,10 +3792,21 @@
             ctx.strokeRect(x + 48*s, y + 45*s, 24*s, 25*s);
         }
 
+        let lastError = '';
         function gameLoop() {
-            update();
-            draw();
-            updateMobileButtons(); // Update button states each frame
+            try {
+                update();
+                draw();
+                updateMobileButtons(); // Update button states each frame
+            } catch(e) {
+                if (e.message !== lastError) {
+                    lastError = e.message;
+                    console.error('Game error:', e);
+                }
+                ctx.fillStyle = 'red';
+                ctx.font = '16px monospace';
+                ctx.fillText('ERROR: ' + e.message, 10, 30);
+            }
             requestAnimationFrame(gameLoop);
         }
 
@@ -3827,8 +3846,10 @@
         }
 
         // Event listeners
+        let debugKeyInfo = 'No key pressed yet';
         document.addEventListener('keydown', (e) => {
             keys[e.code] = true;
+            debugKeyInfo = 'KEY: ' + e.code + ' | running=' + gameRunning + ' demo=' + demoMode;
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
                 e.preventDefault();
             }
